@@ -7,6 +7,8 @@ import { Login } from './components/auth/Login';
 import { Register } from './components/auth/Register';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { DashboardPage } from './pages/DashboardPage';
+import { ResetPassword } from './components/auth/ResetPassword';
+import { ForgotPassword } from './components/auth/ForgotPassword';
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/dashboard"
               element={

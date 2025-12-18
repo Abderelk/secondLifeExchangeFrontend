@@ -48,7 +48,7 @@ export const Login = () => {
   };
 
   return (
-    <div
+    <div 
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -73,10 +73,10 @@ export const Login = () => {
 
       {/* Container pour tabs + card */}
       <div style={{ width: '100%', maxWidth: '400px' }}>
-
+        
         {/* Tabs Connexion / Inscription */}
-        <div
-          style={{
+        <div 
+          style={{ 
             display: 'flex',
             backgroundColor: '#E5E7EB',
             borderRadius: '9999px',
@@ -122,7 +122,7 @@ export const Login = () => {
         </div>
 
         {/* Card */}
-        <div
+        <div 
           style={{
             backgroundColor: '#FFFFFF',
             borderTopLeftRadius: '24px',
@@ -134,7 +134,7 @@ export const Login = () => {
             overflow: 'hidden',
           }}
         >
-          <h2
+          <h2 
             style={{
               fontSize: '18px',
               fontWeight: 600,
@@ -144,7 +144,7 @@ export const Login = () => {
           >
             Connexion
           </h2>
-          <p
+          <p 
             style={{
               fontSize: '14px',
               color: '#9CA3AF',
@@ -155,10 +155,10 @@ export const Login = () => {
           </p>
 
           {error && (
-            <Alert
-              severity="error"
-              sx={{
-                mb: 2,
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2, 
                 borderRadius: '12px',
               }}
             >
@@ -169,7 +169,7 @@ export const Login = () => {
           <form onSubmit={handleSubmit}>
             {/* Email */}
             <div style={{ marginBottom: '16px' }}>
-              <label
+              <label 
                 style={{
                   display: 'block',
                   fontSize: '14px',
@@ -216,8 +216,8 @@ export const Login = () => {
             </div>
 
             {/* Mot de passe */}
-            <div style={{ marginBottom: '24px' }}>
-              <label
+            <div style={{ marginBottom: '8px' }}>
+              <label 
                 style={{
                   display: 'block',
                   fontSize: '14px',
@@ -270,6 +270,21 @@ export const Login = () => {
                   ),
                 }}
               />
+            </div>
+
+            {/* Lien mot de passe oublié */}
+            <div style={{ textAlign: 'right', marginBottom: '24px' }}>
+              <Link 
+                to="/forgot-password"
+                style={{
+                  fontSize: '13px',
+                  color: '#22C55E',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Mot de passe oublié ?
+              </Link>
             </div>
 
             {/* Bouton Se connecter */}
