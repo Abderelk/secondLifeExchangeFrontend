@@ -6,21 +6,17 @@ import { useAuth } from '../../context/AuthContext';
 import {
   TextField,
   Button,
-  Card,
-  CardContent,
-  Typography,
   Alert,
   CircularProgress,
   InputAdornment,
   IconButton,
-  Box
 } from '@mui/material';
-import { Visibility, VisibilityOff, Nature, Login as LoginIcon } from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -30,10 +26,8 @@ export const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
     setError('');
   };
 
@@ -54,99 +48,259 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 p-4">
-      <Card className="w-full max-w-md shadow-2xl rounded-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-emerald-600 to-green-600 p-8 text-white text-center">
-          <Nature style={{ fontSize: 64 }} className="mb-3" />
-          <Typography variant="h4" component="h1" className="font-bold mb-2">
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        background: 'linear-gradient(180deg, #F0F9FF 0%, #E0F2FE 50%, #F0FDFA 100%)',
+      }}
+    >
+      {/* Logo */}
+      <img
+        src="/logo.jpeg"
+        alt="SecondLife Exchange"
+        style={{
+          width: '160px',
+          height: 'auto',
+          borderRadius: '16px',
+          marginBottom: '32px',
+        }}
+      />
+
+      {/* Container pour tabs + card */}
+      <div style={{ width: '100%', maxWidth: '400px' }}>
+
+        {/* Tabs Connexion / Inscription */}
+        <div
+          style={{
+            display: 'flex',
+            backgroundColor: '#E5E7EB',
+            borderRadius: '9999px',
+            padding: '4px',
+            marginBottom: '16px',
+          }}
+        >
+          <button
+            style={{
+              flex: 1,
+              padding: '10px 24px',
+              borderRadius: '9999px',
+              fontSize: '14px',
+              fontWeight: 500,
+              backgroundColor: '#FFFFFF',
+              color: '#1F2937',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            }}
+          >
             Connexion
-          </Typography>
-          <Typography variant="body1" className="text-emerald-50">
-            Bon retour sur SecondLife Exchange 🌿
-          </Typography>
+          </button>
+          <Link
+            to="/register"
+            style={{
+              flex: 1,
+              padding: '10px 24px',
+              borderRadius: '9999px',
+              fontSize: '14px',
+              fontWeight: 500,
+              backgroundColor: 'transparent',
+              color: '#6B7280',
+              textDecoration: 'none',
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            Inscription
+          </Link>
         </div>
 
-        <CardContent className="p-8">
+        {/* Card */}
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            borderBottomLeftRadius: '24px',
+            borderBottomRightRadius: '24px',
+            padding: '32px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: '#1F2937',
+              margin: '0 0 4px 0',
+            }}
+          >
+            Connexion
+          </h2>
+          <p
+            style={{
+              fontSize: '14px',
+              color: '#9CA3AF',
+              margin: '0 0 24px 0',
+            }}
+          >
+            Connectez-vous à votre compte pour échanger des objets
+          </p>
+
           {error && (
-            <Alert severity="error" className="mb-6 border-l-4 border-red-500">
+            <Alert
+              severity="error"
+              sx={{
+                mb: 2,
+                borderRadius: '12px',
+              }}
+            >
               {error}
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <TextField
-              fullWidth
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              variant="outlined"
-              disabled={loading}
-              autoComplete="email"
-            />
+          <form onSubmit={handleSubmit}>
+            {/* Email */}
+            <div style={{ marginBottom: '16px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  marginBottom: '6px',
+                }}
+              >
+                Email
+              </label>
+              <TextField
+                fullWidth
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                variant="outlined"
+                disabled={loading}
+                autoComplete="email"
+                placeholder="vous@exemple.com"
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#F3F4F6',
+                    '& fieldset': {
+                      border: 'none',
+                    },
+                    '&.Mui-focused fieldset': {
+                      border: '2px solid #22C55E',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    padding: '12px 14px',
+                    fontSize: '14px',
+                    '&::placeholder': {
+                      color: '#9CA3AF',
+                      opacity: 1,
+                    },
+                  },
+                }}
+              />
+            </div>
 
-            <TextField
-              fullWidth
-              label="Mot de passe"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password}
-              onChange={handleChange}
-              required
-              variant="outlined"
-              disabled={loading}
-              autoComplete="current-password"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
+            {/* Mot de passe */}
+            <div style={{ marginBottom: '24px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  marginBottom: '6px',
+                }}
+              >
+                Mot de passe
+              </label>
+              <TextField
+                fullWidth
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleChange}
+                required
+                variant="outlined"
+                disabled={loading}
+                autoComplete="current-password"
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#F3F4F6',
+                    '& fieldset': {
+                      border: 'none',
+                    },
+                    '&.Mui-focused fieldset': {
+                      border: '2px solid #22C55E',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    padding: '12px 14px',
+                    fontSize: '14px',
+                  },
+                }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        disabled={loading}
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </div>
 
+            {/* Bouton Se connecter */}
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              size="large"
               disabled={loading}
-              className="bg-emerald-600 hover:bg-emerald-700 mt-6 py-3 shadow-lg"
-              style={{ backgroundColor: loading ? undefined : '#059669' }}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LoginIcon />}
+              sx={{
+                backgroundColor: '#22C55E',
+                textTransform: 'none',
+                fontSize: '15px',
+                fontWeight: 600,
+                padding: '12px',
+                borderRadius: '10px',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: '#16A34A',
+                  boxShadow: 'none',
+                },
+                '&:disabled': {
+                  backgroundColor: '#86EFAC',
+                },
+              }}
+              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
             >
               {loading ? 'Connexion en cours...' : 'Se connecter'}
             </Button>
           </form>
-
-          <Box className="mt-8 space-y-4">
-            <div className="text-center">
-              <Typography variant="body2" className="text-gray-600">
-                Pas encore de compte ?{' '}
-                <Link
-                  to="/register"
-                  className="text-emerald-600 hover:text-emerald-800 font-semibold underline-offset-2 hover:underline"
-                >
-                  Créer un compte
-                </Link>
-              </Typography>
-            </div>
-
-            <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-4 rounded-lg border-2 border-emerald-200">
-              <Typography variant="caption" className="text-emerald-800 block text-center">
-                🌱 Rejoignez notre communauté pour l'économie circulaire
-              </Typography>
-            </div>
-          </Box>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

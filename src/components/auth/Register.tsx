@@ -1,460 +1,898 @@
 // src/components/auth/Register.tsx
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, type SyntheticEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   TextField,
   Button,
-  Typography,
   Alert,
   CircularProgress,
   InputAdornment,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
+  Checkbox,
+  FormControlLabel,
+  Autocomplete,
   Box,
-  Stepper,
-  Step,
-  StepLabel,
-  OutlinedInput,
-  type SelectChangeEvent
+  LinearProgress,
+  Typography,
 } from '@mui/material';
-import { Visibility, VisibilityOff, ArrowBack, ArrowForward, CheckCircle } from '@mui/icons-material';
-import { INTEREST_CATEGORIES } from '../../types';
+import { Visibility, VisibilityOff, Check, Close } from '@mui/icons-material';
 
-const steps = ['Informations', 'Localisation', 'Préférences'];
+// Type pour les suggestions de ville
+interface CitySuggestion {
+  city: string;
+  postalCode: string;
+  label: string;
+}
+
+// Type pour la réponse de l'API adresse
+interface AddressFeature {
+  properties: {
+    city?: string;
+    name?: string;
+    postcode: string;
+  };
+}
+
+interface AddressApiResponse {
+  features: AddressFeature[];
+}
+
+// Debounce hook
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 export const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  
-  const [activeStep, setActiveStep] = useState(0);
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
+    city: '',
+    postalCode: '',
+    country: 'France',
     password: '',
     confirmPassword: '',
-    phone: '',
-    address: {
-      street: '',
-      city: '',
-      postalCode: '',
-      country: 'France'
-    },
+    bio: '',
     interests: [] as string[],
-    bio: ''
   });
+
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // État pour l'autocomplétion
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
+  const [cityInputValue, setCityInputValue] = useState('');
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(null);
+
+  const debouncedCityInput = useDebounce(cityInputValue, 300);
+
+  // Recherche de villes via l'API gouvernementale
+  const searchCities = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setCitySuggestions([]);
+      return;
+    }
+
+    setLoadingSuggestions(true);
+    try {
+      const response = await fetch(
+        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&type=municipality&limit=10`
+      );
+      const data: AddressApiResponse = await response.json();
+
+      const suggestions: CitySuggestion[] = data.features.map((feature: AddressFeature) => ({
+        city: feature.properties.city || feature.properties.name || '',
+        postalCode: feature.properties.postcode,
+        label: `${feature.properties.city || feature.properties.name} (${feature.properties.postcode})`,
+      }));
+
+      // Supprimer les doublons
+      const uniqueSuggestions = suggestions.filter(
+        (suggestion, index, self) =>
+          index === self.findIndex((s) => s.label === suggestion.label)
+      );
+
+      setCitySuggestions(uniqueSuggestions);
+    } catch (err) {
+      console.error('Erreur lors de la recherche de villes:', err);
+      setCitySuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }, []);
+
+  // Effet pour la recherche de villes
+  useEffect(() => {
+    searchCities(debouncedCityInput);
+  }, [debouncedCityInput, searchCities]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    if (name.startsWith('address.')) {
-      const addressField = name.split('.')[1];
-      setFormData({
-        ...formData,
-        address: {
-          ...formData.address,
-          [addressField]: value
-        }
-      });
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value
-      });
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
     setError('');
   };
 
-  const handleInterestsChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    setFormData({
-      ...formData,
-      interests: typeof value === 'string' ? value.split(',') : value
-    });
-  };
-
-  const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 0:
-        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-          setError('Veuillez remplir tous les champs obligatoires');
-          return false;
-        }
-        if (formData.password !== formData.confirmPassword) {
-          setError('Les mots de passe ne correspondent pas');
-          return false;
-        }
-        if (formData.password.length < 6) {
-          setError('Le mot de passe doit contenir au moins 6 caractères');
-          return false;
-        }
-        return true;
-      case 1:
-        if (!formData.address.city || !formData.address.postalCode) {
-          setError('La ville et le code postal sont requis');
-          return false;
-        }
-        return true;
-      case 2:
-        if (formData.interests.length === 0) {
-          setError('Veuillez sélectionner au moins une catégorie');
-          return false;
-        }
-        return true;
-      default:
-        return true;
+  // Sélection d'une ville depuis l'autocomplétion
+  const handleCitySelect = (
+    _event: SyntheticEvent<Element, Event>,
+    value: CitySuggestion | string | null
+  ) => {
+    if (value && typeof value !== 'string') {
+      setSelectedCity(value);
+      setFormData(prev => ({
+        ...prev,
+        city: value.city,
+        postalCode: value.postalCode,
+      }));
+      setCityInputValue(value.city);
+    } else if (typeof value === 'string') {
+      setFormData(prev => ({
+        ...prev,
+        city: value,
+      }));
     }
   };
 
-  const handleNext = () => {
-    if (validateStep(activeStep)) {
-      setActiveStep((prevStep) => prevStep + 1);
-      setError('');
-    }
+  // Validation de l'email
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
-  const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1);
-    setError('');
+  // Validation du mot de passe - critères individuels
+  const passwordCriteria = {
+    minLength: (password: string) => password.length >= 12,
+    hasUppercase: (password: string) => /[A-Z]/.test(password),
+    hasLowercase: (password: string) => /[a-z]/.test(password),
+    hasNumber: (password: string) => /[0-9]/.test(password),
+    hasSpecialChar: (password: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
+  };
+
+  const getPasswordStrength = (password: string): number => {
+    let strength = 0;
+    if (passwordCriteria.minLength(password)) strength += 20;
+    if (passwordCriteria.hasUppercase(password)) strength += 20;
+    if (passwordCriteria.hasLowercase(password)) strength += 20;
+    if (passwordCriteria.hasNumber(password)) strength += 20;
+    if (passwordCriteria.hasSpecialChar(password)) strength += 20;
+    return strength;
+  };
+
+  const isValidPassword = (password: string): boolean => {
+    return (
+      passwordCriteria.minLength(password) &&
+      passwordCriteria.hasUppercase(password) &&
+      passwordCriteria.hasSpecialChar(password)
+    );
+  };
+
+  const getPasswordStrengthColor = (strength: number): string => {
+    if (strength <= 20) return '#EF4444';
+    if (strength <= 40) return '#F97316';
+    if (strength <= 60) return '#EAB308';
+    if (strength <= 80) return '#84CC16';
+    return '#22C55E';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!validateStep(activeStep)) {
+    // Validations côté frontend
+    if (!formData.firstName.trim()) {
+      setError('Le prénom est requis');
+      return;
+    }
+
+    if (!formData.lastName.trim()) {
+      setError('Le nom est requis');
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError('L\'email est requis');
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setError('Veuillez entrer une adresse email valide (ex: nom@exemple.com)');
+      return;
+    }
+
+    if (!formData.city.trim()) {
+      setError('La ville est requise');
+      return;
+    }
+
+    if (!formData.postalCode.trim()) {
+      setError('Le code postal est requis');
+      return;
+    }
+
+    if (!formData.password) {
+      setError('Le mot de passe est requis');
+      return;
+    }
+
+    if (!isValidPassword(formData.password)) {
+      setError('Le mot de passe doit contenir au moins 12 caractères, une majuscule et un caractère spécial');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    if (!acceptTerms) {
+      setError('Vous devez accepter les conditions générales d\'utilisation');
       return;
     }
 
     setLoading(true);
 
     try {
-      const {  ...credentials } = formData;
-      await register(credentials);
+      const registerData = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        phone: formData.phone.trim(),
+        address: {
+          city: formData.city.trim(),
+          postalCode: formData.postalCode.trim(),
+          country: formData.country,
+        },
+        bio: formData.bio.trim(),
+        interests: formData.interests,
+      };
+
+      await register(registerData);
       navigate('/dashboard');
     } catch (err) {
       const error = err as Error;
-      setError(error.message || "Erreur d'inscription");
+      const errorMessage = error.message || '';
+
+      if (errorMessage.includes('email') && errorMessage.includes('invalide')) {
+        setError('Veuillez entrer une adresse email valide (ex: nom@exemple.com)');
+      } else if (errorMessage.includes('email') && errorMessage.includes('utilisé')) {
+        setError('Cette adresse email est déjà utilisée. Essayez de vous connecter.');
+      } else if (errorMessage.includes('mot de passe')) {
+        setError('Le mot de passe ne respecte pas les critères de sécurité');
+      } else if (errorMessage.includes('validation')) {
+        setError('Veuillez vérifier les informations saisies');
+      } else {
+        setError(errorMessage || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const renderStepContent = (step: number) => {
-    switch (step) {
-      case 0:
-        return (
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <TextField
-                fullWidth
-                label="Prénom"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                disabled={loading}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-              />
-              <TextField
-                fullWidth
-                label="Nom"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                disabled={loading}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-              />
-            </div>
-
-            <TextField
-              fullWidth
-              label="Adresse email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              variant="outlined"
-              disabled={loading}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-            />
-
-            <TextField
-              fullWidth
-              label="Téléphone (optionnel)"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              variant="outlined"
-              disabled={loading}
-              placeholder="+33 6 12 34 56 78"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-            />
-
-            <TextField
-              fullWidth
-              label="Mot de passe"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password}
-              onChange={handleChange}
-              required
-              variant="outlined"
-              disabled={loading}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-
-            <TextField
-              fullWidth
-              label="Confirmer le mot de passe"
-              name="confirmPassword"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              variant="outlined"
-              disabled={loading}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-            />
-          </div>
-        );
-
-      case 1:
-        return (
-          <div className="space-y-5">
-            <TextField
-              fullWidth
-              label="Adresse (optionnel)"
-              name="address.street"
-              value={formData.address.street}
-              onChange={handleChange}
-              variant="outlined"
-              disabled={loading}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <TextField
-                fullWidth
-                label="Ville"
-                name="address.city"
-                value={formData.address.city}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                disabled={loading}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-              />
-
-              <TextField
-                fullWidth
-                label="Code postal"
-                name="address.postalCode"
-                value={formData.address.postalCode}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                disabled={loading}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-              />
-            </div>
-
-            <TextField
-              fullWidth
-              label="Pays"
-              name="address.country"
-              value={formData.address.country}
-              onChange={handleChange}
-              variant="outlined"
-              disabled={loading}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-            />
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl">
-              <p className="text-emerald-900 font-medium mb-2">🎯 Personnalisez votre expérience</p>
-              <p className="text-emerald-700 text-sm">
-                Sélectionnez vos catégories préférées pour des recommandations sur mesure
-              </p>
-            </div>
-
-            <FormControl fullWidth>
-              <InputLabel>Centres d'intérêt</InputLabel>
-              <Select
-                multiple
-                value={formData.interests}
-                onChange={handleInterestsChange}
-                input={<OutlinedInput label="Centres d'intérêt" />}
-                sx={{ borderRadius: '12px' }}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {selected.map((value) => {
-                      const category = INTEREST_CATEGORIES.find(c => c.value === value);
-                      return (
-                        <Chip 
-                          key={value} 
-                          label={`${category?.icon} ${category?.label.split(' ')[1]}`}
-                          size="small"
-                          className="bg-emerald-100 text-emerald-800"
-                        />
-                      );
-                    })}
-                  </Box>
-                )}
-              >
-                {INTEREST_CATEGORIES.map((category) => (
-                  <MenuItem key={category.value} value={category.value}>
-                    <span className="mr-3 text-xl">{category.icon}</span>
-                    <span>{category.label.split(' ')[1]}</span>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              fullWidth
-              label="Bio (optionnel)"
-              name="bio"
-              value={formData.bio}
-              onChange={handleChange}
-              multiline
-              rows={4}
-              variant="outlined"
-              disabled={loading}
-              placeholder="Parlez-nous de votre engagement..."
-              helperText={`${formData.bio.length}/500 caractères`}
-              inputProps={{ maxLength: 500 }}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-            />
-          </div>
-        );
-
-      default:
-        return null;
-    }
+  const inputStyles = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: '10px',
+      backgroundColor: '#F3F4F6',
+      '& fieldset': {
+        border: 'none',
+      },
+      '&.Mui-focused fieldset': {
+        border: '2px solid #22C55E',
+      },
+    },
+    '& .MuiInputBase-input': {
+      padding: '12px 14px',
+      fontSize: '14px',
+      '&::placeholder': {
+        color: '#9CA3AF',
+        opacity: 1,
+      },
+    },
   };
 
+  const passwordStrength = getPasswordStrength(formData.password);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-emerald-50/30 to-white p-6">
-      <div className="w-full max-w-3xl">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 rounded-3xl mb-6">
-            <span className="text-5xl">🌿</span>
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            Rejoignez SecondLife
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Créez votre compte en quelques minutes
-          </p>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        background: 'linear-gradient(180deg, #F0F9FF 0%, #E0F2FE 50%, #F0FDFA 100%)',
+      }}
+    >
+      {/* Logo */}
+      <img
+        src="/logo.jpeg"
+        alt="SecondLife Exchange"
+        style={{
+          width: '160px',
+          height: 'auto',
+          borderRadius: '16px',
+          marginBottom: '32px',
+        }}
+      />
+
+      {/* Container pour tabs + card */}
+      <div style={{ width: '100%', maxWidth: '400px' }}>
+
+        {/* Tabs Connexion / Inscription */}
+        <div
+          style={{
+            display: 'flex',
+            backgroundColor: '#E5E7EB',
+            borderRadius: '9999px',
+            padding: '4px',
+            marginBottom: '16px',
+          }}
+        >
+          <Link
+            to="/login"
+            style={{
+              flex: 1,
+              padding: '10px 24px',
+              borderRadius: '9999px',
+              fontSize: '14px',
+              fontWeight: 500,
+              backgroundColor: 'transparent',
+              color: '#6B7280',
+              textDecoration: 'none',
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            Connexion
+          </Link>
+          <button
+            style={{
+              flex: 1,
+              padding: '10px 24px',
+              borderRadius: '9999px',
+              fontSize: '14px',
+              fontWeight: 500,
+              backgroundColor: '#FFFFFF',
+              color: '#1F2937',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            }}
+          >
+            Inscription
+          </button>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10">
-          <Stepper activeStep={activeStep} className="mb-10">
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            borderBottomLeftRadius: '24px',
+            borderBottomRightRadius: '24px',
+            padding: '32px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: '#1F2937',
+              margin: '0 0 4px 0',
+            }}
+          >
+            Inscription
+          </h2>
+          <p
+            style={{
+              fontSize: '14px',
+              color: '#9CA3AF',
+              margin: '0 0 24px 0',
+            }}
+          >
+            Créez un compte pour rejoindre la communauté
+          </p>
 
           {error && (
-            <Alert severity="error" className="mb-6" style={{ borderRadius: '12px' }}>
+            <Alert
+              severity="error"
+              sx={{
+                mb: 2,
+                borderRadius: '12px',
+                '& .MuiAlert-message': {
+                  fontSize: '14px',
+                }
+              }}
+            >
               {error}
             </Alert>
           )}
 
           <form onSubmit={handleSubmit}>
-            <Box className="mb-8">
-              {renderStepContent(activeStep)}
-            </Box>
+            {/* Prénom et Nom sur la même ligne */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#374151',
+                    marginBottom: '6px',
+                  }}
+                >
+                  Prénom <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <TextField
+                  fullWidth
+                  name="firstName"
+                  type="text"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required
+                  variant="outlined"
+                  disabled={loading}
+                  placeholder="Jean"
+                  size="small"
+                  sx={inputStyles}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#374151',
+                    marginBottom: '6px',
+                  }}
+                >
+                  Nom <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <TextField
+                  fullWidth
+                  name="lastName"
+                  type="text"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                  variant="outlined"
+                  disabled={loading}
+                  placeholder="Dupont"
+                  size="small"
+                  sx={inputStyles}
+                />
+              </div>
+            </div>
 
-            <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-              <Button
-                onClick={handleBack}
-                disabled={activeStep === 0 || loading}
-                startIcon={<ArrowBack />}
-                className="px-6 py-3"
-                style={{ 
-                  borderRadius: '12px',
-                  textTransform: 'none'
+            {/* Email */}
+            <div style={{ marginBottom: '16px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  marginBottom: '6px',
                 }}
               >
-                Retour
-              </Button>
+                Email <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <TextField
+                fullWidth
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                variant="outlined"
+                disabled={loading}
+                autoComplete="email"
+                placeholder="vous@exemple.com"
+                size="small"
+                sx={inputStyles}
+              />
+            </div>
 
-              {activeStep === steps.length - 1 ? (
-                <Button
-                  onClick={handleSubmit}
-                  variant="contained"
-                  disabled={loading}
-                  className="px-8 py-3 font-semibold shadow-lg"
-                  style={{ 
-                    backgroundColor: loading ? undefined : '#059669',
-                    borderRadius: '12px',
-                    textTransform: 'none'
+            {/* Téléphone */}
+            <div style={{ marginBottom: '16px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  marginBottom: '6px',
+                }}
+              >
+                Téléphone
+              </label>
+              <TextField
+                fullWidth
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                variant="outlined"
+                disabled={loading}
+                placeholder="+33 6 12 34 56 78"
+                size="small"
+                sx={inputStyles}
+              />
+            </div>
+
+            {/* Ville et Code postal sur la même ligne */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+              {/* Ville avec autocomplétion */}
+              <div style={{ flex: 1 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#374151',
+                    marginBottom: '6px',
                   }}
-                  endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle />}
                 >
-                  {loading ? 'Création...' : 'Créer mon compte'}
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleNext}
-                  variant="contained"
-                  disabled={loading}
-                  className="px-8 py-3 font-semibold shadow-lg"
-                  style={{ 
-                    backgroundColor: '#059669',
-                    borderRadius: '12px',
-                    textTransform: 'none'
+                  Ville <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <Autocomplete
+                  freeSolo
+                  options={citySuggestions}
+                  getOptionLabel={(option) =>
+                    typeof option === 'string' ? option : option.city
+                  }
+                  value={selectedCity}
+                  loading={loadingSuggestions}
+                  inputValue={cityInputValue}
+                  onInputChange={(_event, newValue) => {
+                    setCityInputValue(newValue);
+                    // Si l'utilisateur tape manuellement, mettre à jour formData.city
+                    if (!selectedCity || selectedCity.city !== newValue) {
+                      setFormData(prev => ({ ...prev, city: newValue }));
+                    }
                   }}
-                  endIcon={<ArrowForward />}
+                  onChange={handleCitySelect}
+                  renderOption={(props, option) => {
+                    const { key, ...otherProps } = props;
+                    return (
+                      <Box component="li" key={key} {...otherProps}>
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{option.city}</div>
+                          <div style={{ fontSize: '12px', color: '#6B7280' }}>{option.postalCode}</div>
+                        </div>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Rechercher..."
+                      size="small"
+                      sx={inputStyles}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingSuggestions ? <CircularProgress color="inherit" size={16} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              </div>
+
+              {/* Code postal - rempli automatiquement */}
+              <div style={{ width: '120px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#374151',
+                    marginBottom: '6px',
+                  }}
                 >
-                  Continuer
-                </Button>
+                  Code postal <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <TextField
+                  fullWidth
+                  name="postalCode"
+                  type="text"
+                  value={formData.postalCode}
+                  onChange={handleChange}
+                  required
+                  variant="outlined"
+                  disabled={loading}
+                  placeholder="75001"
+                  size="small"
+                  sx={inputStyles}
+                />
+              </div>
+            </div>
+
+            {/* Mot de passe */}
+            <div style={{ marginBottom: '8px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  marginBottom: '6px',
+                }}
+              >
+                Mot de passe <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <TextField
+                fullWidth
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleChange}
+                required
+                variant="outlined"
+                disabled={loading}
+                autoComplete="new-password"
+                placeholder="Créez un mot de passe sécurisé"
+                size="small"
+                sx={inputStyles}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        disabled={loading}
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </div>
+
+            {/* Indicateur de force du mot de passe */}
+            {formData.password && (
+              <div style={{ marginBottom: '16px' }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={passwordStrength}
+                  sx={{
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#E5E7EB',
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor: getPasswordStrengthColor(passwordStrength),
+                      borderRadius: 3,
+                    },
+                  }}
+                />
+                <div style={{ marginTop: '8px' }}>
+                  <PasswordCriteriaItem
+                    met={passwordCriteria.minLength(formData.password)}
+                    text="12 caractères minimum"
+                  />
+                  <PasswordCriteriaItem
+                    met={passwordCriteria.hasUppercase(formData.password)}
+                    text="Une lettre majuscule"
+                  />
+                  <PasswordCriteriaItem
+                    met={passwordCriteria.hasLowercase(formData.password)}
+                    text="Une lettre minuscule"
+                  />
+                  <PasswordCriteriaItem
+                    met={passwordCriteria.hasNumber(formData.password)}
+                    text="Un chiffre"
+                  />
+                  <PasswordCriteriaItem
+                    met={passwordCriteria.hasSpecialChar(formData.password)}
+                    text="Un caractère spécial (!@#$%...)"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Confirmer mot de passe */}
+            <div style={{ marginBottom: '16px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  marginBottom: '6px',
+                }}
+              >
+                Confirmer le mot de passe <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <TextField
+                fullWidth
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                variant="outlined"
+                disabled={loading}
+                autoComplete="new-password"
+                placeholder="Confirmez votre mot de passe"
+                size="small"
+                sx={inputStyles}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                        disabled={loading}
+                        size="small"
+                      >
+                        {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <Typography variant="caption" sx={{ color: '#EF4444', mt: 0.5, display: 'block' }}>
+                  Les mots de passe ne correspondent pas
+                </Typography>
               )}
             </div>
-          </form>
 
-          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-            <Typography variant="body2" className="text-gray-600">
-              Vous avez déjà un compte ?{' '}
-              <Link to="/login" className="text-emerald-600 hover:text-emerald-700 font-semibold">
-                Se connecter
-              </Link>
-            </Typography>
-          </div>
+            {/* Bio */}
+            <div style={{ marginBottom: '16px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#374151',
+                  marginBottom: '6px',
+                }}
+              >
+                Bio (optionnel)
+              </label>
+              <TextField
+                fullWidth
+                name="bio"
+                multiline
+                rows={3}
+                value={formData.bio}
+                onChange={handleChange}
+                variant="outlined"
+                disabled={loading}
+                placeholder="Parlez-nous de vous et de vos centres d'intérêt..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#F3F4F6',
+                    '& fieldset': {
+                      border: 'none',
+                    },
+                    '&.Mui-focused fieldset': {
+                      border: '2px solid #22C55E',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '14px',
+                    '&::placeholder': {
+                      color: '#9CA3AF',
+                      opacity: 1,
+                    },
+                  },
+                }}
+              />
+            </div>
+
+            {/* Checkbox CGU */}
+            <div style={{ marginBottom: '24px' }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    disabled={loading}
+                    sx={{
+                      color: '#D1D5DB',
+                      '&.Mui-checked': {
+                        color: '#22C55E',
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <span style={{ fontSize: '13px', color: '#6B7280' }}>
+                    J'accepte les{' '}
+                    <a href="/terms" style={{ color: '#22C55E', textDecoration: 'underline' }}>
+                      conditions générales d'utilisation
+                    </a>
+                    {' '}et la{' '}
+                    <a href="/privacy" style={{ color: '#22C55E', textDecoration: 'underline' }}>
+                      politique de confidentialité
+                    </a>
+                    {' '}<span style={{ color: '#EF4444' }}>*</span>
+                  </span>
+                }
+              />
+            </div>
+
+            {/* Bouton S'inscrire */}
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              sx={{
+                backgroundColor: '#22C55E',
+                textTransform: 'none',
+                fontSize: '15px',
+                fontWeight: 600,
+                padding: '12px',
+                borderRadius: '10px',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: '#16A34A',
+                  boxShadow: 'none',
+                },
+                '&:disabled': {
+                  backgroundColor: '#86EFAC',
+                },
+              }}
+              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
+            >
+              {loading ? 'Inscription en cours...' : 'S\'inscrire'}
+            </Button>
+          </form>
         </div>
       </div>
     </div>
   );
 };
+
+// Composant pour afficher un critère de mot de passe
+const PasswordCriteriaItem = ({ met, text }: { met: boolean; text: string }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+    {met ? (
+      <Check sx={{ fontSize: 14, color: '#22C55E' }} />
+    ) : (
+      <Close sx={{ fontSize: 14, color: '#D1D5DB' }} />
+    )}
+    <span style={{ fontSize: '12px', color: met ? '#22C55E' : '#9CA3AF' }}>
+      {text}
+    </span>
+  </div>
+);

@@ -6,7 +6,6 @@ import { Navbar } from './components/layout/Navbar';
 import { Login } from './components/auth/Login';
 import { Register } from './components/auth/Register';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { HomePage } from './pages/HomePage';
 import { DashboardPage } from './pages/DashboardPage';
 
 function App() {
@@ -14,15 +13,14 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          <Navbar />
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
+                  <Navbar />
                   <DashboardPage />
                 </ProtectedRoute>
               }

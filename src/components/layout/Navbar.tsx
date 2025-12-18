@@ -53,10 +53,10 @@ export const Navbar = () => {
   };
 
   return (
-    <AppBar 
-      position="sticky" 
+    <AppBar
+      position="sticky"
       elevation={0}
-      sx={{ 
+      sx={{
         backgroundColor: 'white',
         borderBottom: '1px solid #e5e7eb',
         color: '#111827'
@@ -64,7 +64,7 @@ export const Navbar = () => {
     >
       <Container maxWidth="lg">
         <Toolbar disableGutters sx={{ minHeight: '80px' }}>
-          <div 
+          <div
             className="flex items-center gap-3 cursor-pointer flex-1"
             onClick={() => navigate('/')}
           >
@@ -89,9 +89,9 @@ export const Navbar = () => {
                 onClick={handleMenu}
                 sx={{ p: 0 }}
               >
-                <Avatar 
-                  sx={{ 
-                    width: 44, 
+                <Avatar
+                  sx={{
+                    width: 44,
                     height: 44,
                     backgroundColor: '#059669',
                     fontWeight: 'bold'
@@ -127,7 +127,7 @@ export const Navbar = () => {
             <div className="flex gap-3">
               <Button
                 onClick={() => navigate('/login')}
-                sx={{ 
+                sx={{
                   color: '#059669',
                   textTransform: 'none',
                   fontWeight: 600,
@@ -140,7 +140,7 @@ export const Navbar = () => {
               <Button
                 variant="contained"
                 onClick={() => navigate('/register')}
-                sx={{ 
+                sx={{
                   backgroundColor: '#059669',
                   textTransform: 'none',
                   fontWeight: 600,
