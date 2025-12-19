@@ -1,9 +1,7 @@
-// src/services/api.ts
-
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5001/api', // URL du backend !
+    baseURL: import.meta.env.VITE_API_URL || 'https://api-secondlife-987652673576.europe-west1.run.app/api',
     headers: {
         'Content-Type': 'application/json',
     },
