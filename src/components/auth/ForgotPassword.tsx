@@ -9,7 +9,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { ArrowBack, Email, CheckCircle } from '@mui/icons-material';
-import api from '../../api/axios';
+import api from '../../services/api';
 
 export const ForgotPassword = () => {
   const [email, setEmail] = useState('');

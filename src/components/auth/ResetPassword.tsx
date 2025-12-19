@@ -12,7 +12,7 @@ import {
     LinearProgress,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Check, Close, CheckCircle, ErrorOutline } from '@mui/icons-material';
-import api from '../../api/axios';
+import api from '../../services/api';
 
 export const ResetPassword = () => {
     const navigate = useNavigate();

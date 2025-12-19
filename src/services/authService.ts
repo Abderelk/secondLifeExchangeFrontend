@@ -1,6 +1,6 @@
 // src/services/authService.ts
 
-import api from '../api/axios.tsx';
+import api from './api.ts';
 import type { LoginCredentials, RegisterCredentials, AuthResponse } from '../types/index.ts';
 
 export const authService = {
