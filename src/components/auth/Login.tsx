@@ -23,7 +23,7 @@ export const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading,] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,17 +33,13 @@ export const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+
 
     try {
-      await login(formData);
+      await login(formData.email, formData.password);
       navigate('/home');
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || 'Erreur de connexion');
-    } finally {
-      setLoading(false);
+      console.log(err)
     }
   };
 

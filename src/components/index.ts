@@ -5,6 +5,9 @@ export { Header } from './layout/Header';
 export { Footer } from './layout/Footer';
 export { BottomNavigation } from './layout/BottomNavigation';
 
+// Common
+export { FloatingAddButton } from './common/FloatingAddButton';
+
 // Home
 export { WeeklyThemeBanner } from './home/WeeklyThemeBanner';
 export type { WeeklyTheme } from './home/WeeklyThemeBanner';
@@ -20,3 +23,12 @@ export type { Item } from './items/ItemCard';
 export { ItemSelector } from './exchange/ItemSelector';
 export { ExchangeRequestCard } from './exchange/ExchangeRequestCard';
 export { ProposeExchangeModal } from './exchange/ProposeExchangeModal';
+
+// Profile
+export { ProfileHeader } from './profile/ProfileHeader';
+export { ProfileStats } from './profile/ProfileStats';
+export { UserItemsSection } from './profile/UserItemsSection';
+export { ProfileMenu } from './profile/ProfileMenu';
+export type { UserProfile } from './profile/ProfileHeader';
+export type { UserStats } from './profile/ProfileStats';
+export type { UserItem } from './profile/UserItemsSection';
