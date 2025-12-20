@@ -6,7 +6,7 @@ import api from '../services/api';
 
 // Type User complet
 export interface User {
-  id: string;
+  _id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -38,7 +38,7 @@ export interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
@@ -56,7 +56,7 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setIsLoading] = useState(true);
 
   // Charger l'utilisateur au démarrage
   useEffect(() => {
@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Formatter l'utilisateur
     const formattedUser: User = {
-      id: userData._id || userData.id,
+      _id: userData._id || userData.id,
       firstName: userData.firstName,
       lastName: userData.lastName,
       email: userData.email,
@@ -124,7 +124,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const { token: newToken, user: userData } = response.data;
 
     const formattedUser: User = {
-      id: userData._id || userData.id,
+      _id: userData._id || userData.id,
       firstName: userData.firstName,
       lastName: userData.lastName,
       email: userData.email,
@@ -165,7 +165,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user,
     token,
     isAuthenticated: !!token && !!user,
-    isLoading,
+    loading,
     login,
     register,
     logout,

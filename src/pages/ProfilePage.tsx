@@ -28,14 +28,14 @@ export const ProfilePage = () => {
     });
 
     const fetchUserData = useCallback(async () => {
-        if (!user?.id) return;
+        if (!user?._id) return;
 
         try {
             setLoading(true);
             setError(null);
 
             // Récupérer les items de l'utilisateur
-            const items = await getUserItems(user.id);
+            const items = await getUserItems(user._id);
 
             // Mapper les items
             const mappedItems: UserItem[] = items.map((item: {
@@ -77,7 +77,7 @@ export const ProfilePage = () => {
         } finally {
             setLoading(false);
         }
-    }, [user?.id]);
+    }, [user?._id]);
 
     useEffect(() => {
         fetchUserData();
@@ -126,7 +126,7 @@ export const ProfilePage = () => {
 
     // Profil utilisateur formaté
     const userProfile: UserProfile = {
-        id: user?.id || '',
+        id: user?._id || '',
         firstName: user?.firstName || 'Utilisateur',
         lastName: user?.lastName || '',
         email: user?.email || '',
