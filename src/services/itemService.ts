@@ -2,6 +2,7 @@
 
 import api from './api';
 import type { Item } from '../components/items/ItemCard';
+import type { ApiItem } from '../types';
 
 export interface ItemsResponse {
     data: Item[];
@@ -81,9 +82,8 @@ export const toggleLike = async (id: string): Promise<{ isLiked: boolean; likesC
 };
 
 // Récupérer les items d'un utilisateur
-export const getUserItems = async (userId: string, status?: string) => {
-    const params = status ? `?status=${status}` : '';
-    const response = await api.get(`/items/user/${userId}${params}`);
+export const getUserItems = async (userId: string): Promise<ApiItem[]> => {
+    const response = await api.get(`/items/user/${userId}`);
     return response.data.data;
 };
 

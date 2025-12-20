@@ -9,6 +9,7 @@ import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { FloatingAddButton } from '../components/common/FloatingAddButton';
 import { WeeklyThemeBanner, type WeeklyTheme } from '../components/home/WeeklyThemeBanner';
 import { StatsSection, type StatItem } from '../components/home/StatsSection';
+import { AISuggestionsButton } from '../components/home/AISuggestionsButton';
 import { ItemsGrid } from '../components/items/ItemsGrid';
 import { type Item } from '../components/items/ItemCard';
 import { getHomeData } from '../services/homeService';
@@ -174,6 +175,9 @@ export const HomePage = () => {
 
             {/* Bouton flottant pour ajouter un item */}
             <FloatingAddButton />
+
+            {/* Bouton flottant IA */}
+            <AISuggestionsButton />
 
             {/* Bottom Navigation pour mobile */}
             <BottomNavigation />

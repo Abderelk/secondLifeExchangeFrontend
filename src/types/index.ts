@@ -80,3 +80,11 @@ export const INTEREST_CATEGORIES = [
   { value: 'multimédia', label: '🎮 Multimédia', icon: '🎮' },
   { value: 'autre', label: '📦 Autre', icon: '📦' }
 ];
+
+export interface ApiItem {
+  _id: string;
+  title: string;
+  images?: string[];
+  category: string;
+  status: 'available' | 'pending' | 'exchanged';
+}

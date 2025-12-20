@@ -13,6 +13,7 @@ export { WeeklyThemeBanner } from './home/WeeklyThemeBanner';
 export type { WeeklyTheme } from './home/WeeklyThemeBanner';
 export { StatsSection } from './home/StatsSection';
 export type { StatItem } from './home/StatsSection';
+export { AISuggestionsButton } from './home/AISuggestionsButton';
 
 // Items
 export { ItemCard } from './items/ItemCard';
