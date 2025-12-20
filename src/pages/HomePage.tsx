@@ -6,6 +6,7 @@ import { TrendingUp, FavoriteBorder, ChatBubbleOutline } from '@mui/icons-materi
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
+import { FloatingAddButton } from '../components/common/FloatingAddButton';
 import { WeeklyThemeBanner, type WeeklyTheme } from '../components/home/WeeklyThemeBanner';
 import { StatsSection, type StatItem } from '../components/home/StatsSection';
 import { ItemsGrid } from '../components/items/ItemsGrid';
@@ -170,6 +171,9 @@ export const HomePage = () => {
             />
 
             <Footer />
+
+            {/* Bouton flottant pour ajouter un item */}
+            <FloatingAddButton />
 
             {/* Bottom Navigation pour mobile */}
             <BottomNavigation />

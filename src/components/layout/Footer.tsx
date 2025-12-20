@@ -32,22 +32,22 @@ export const Footer = () => {
   const navigate = useNavigate();
 
   return (
-    <Box 
-      sx={{ 
-        backgroundColor: '#1F2937', 
-        color: '#FFFFFF', 
+    <Box
+      sx={{
+        backgroundColor: '#1F2937',
+        color: '#FFFFFF',
         py: { xs: 4, md: 6 },
         // Ajouter du padding en bas pour la bottom navigation sur mobile
         pb: { xs: 12, md: 6 },
       }}
     >
       <Container maxWidth="lg">
-        <Box 
-          sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
-            gap: { xs: 3, md: 4 }, 
-            mb: 4 
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gap: { xs: 3, md: 4 },
+            mb: 4
           }}
         >
           {/* Logo & Description */}
@@ -70,7 +70,7 @@ export const Footer = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <FooterLink label="Accueil" onClick={() => navigate('/home')} />
               <FooterLink label="Calendrier" onClick={() => navigate('/calendar')} />
-              <FooterLink label="Messages" onClick={() => navigate('/exchanges')} />
+              <FooterLink label="Échanges" onClick={() => navigate('/exchanges')} />
             </Box>
           </Box>
 

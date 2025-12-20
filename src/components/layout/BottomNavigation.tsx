@@ -7,8 +7,8 @@ import {
   HomeOutlined,
   CalendarMonth,
   CalendarMonthOutlined,
-  ChatBubble,
-  ChatBubbleOutline,
+  SwapHoriz,
+  SwapHorizOutlined,
   Person,
   PersonOutline,
 } from '@mui/icons-material';
@@ -35,9 +35,9 @@ const navItems: NavItem[] = [
   },
   {
     path: '/exchanges',
-    label: 'Messages',
-    icon: <ChatBubbleOutline />,
-    activeIcon: <ChatBubble />,
+    label: 'Échanges',
+    icon: <SwapHorizOutlined />,
+    activeIcon: <SwapHoriz />,
   },
   {
     path: '/profile',
@@ -67,7 +67,7 @@ export const BottomNavigation = () => {
     >
       {navItems.map((item) => {
         const isActive = location.pathname === item.path;
-        
+
         return (
           <Box
             key={item.path}

@@ -1,6 +1,6 @@
 // src/pages/ExchangesPage.tsx
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Box,
     Container,
@@ -35,7 +35,7 @@ export const ExchangesPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [, setActionLoading] = useState<string | null>(null);
 
-    const fetchExchanges = useCallback(async () => {
+    const fetchExchanges = async () => {
         try {
             setLoading(true);
             setError(null);
@@ -47,11 +47,11 @@ export const ExchangesPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [tab]);
-    
+    };
+
     useEffect(() => {
         fetchExchanges();
-    }, [fetchExchanges]);
+    }, [tab]);
 
     const handleAccept = async (id: string) => {
         try {
@@ -107,7 +107,7 @@ export const ExchangesPage = () => {
 
     return (
         <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-            <Header activePage="messages" />
+            <Header activePage="exchanges" />
 
             <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
                 {/* Header */}

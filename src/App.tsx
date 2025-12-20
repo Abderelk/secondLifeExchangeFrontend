@@ -9,6 +9,7 @@ import { ResetPassword } from './components/auth/ResetPassword';
 import { ForgotPassword } from './components/auth/ForgotPassword';
 import HomePage from './pages/HomePage';
 import ExchangesPage from './pages/EchangesPage';
+import AddItemPage from './pages/AddItemPage';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/add-item" element={<ProtectedRoute><AddItemPage /></ProtectedRoute>} />
             <Route path="/exchanges" element={<ProtectedRoute><ExchangesPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
