@@ -22,7 +22,8 @@ export const WeeklyThemeBanner = ({ theme }: WeeklyThemeBannerProps) => {
     <Box
       sx={{
         background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 50%, #2563EB 100%)',
-        py: 6,
+        py: { xs: 4, md: 6 },
+        px: { xs: 2, md: 0 },
         color: '#FFFFFF',
       }}
     >
@@ -30,37 +31,39 @@ export const WeeklyThemeBanner = ({ theme }: WeeklyThemeBannerProps) => {
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
           <Box
             sx={{
-              width: 48,
-              height: 48,
+              width: { xs: 40, md: 48 },
+              height: { xs: 40, md: 48 },
               backgroundColor: 'rgba(255,255,255,0.2)',
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            <CalendarMonth />
+            <CalendarMonth sx={{ fontSize: { xs: 20, md: 24 } }} />
           </Box>
-          <Box>
-            <Typography sx={{ fontSize: '14px', opacity: 0.9, mb: 0.5 }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontSize: { xs: '12px', md: '14px' }, opacity: 0.9, mb: 0.5 }}>
               Thème de la semaine
             </Typography>
             <Typography
               sx={{
-                fontSize: '28px',
+                fontSize: { xs: '22px', md: '28px' },
                 fontWeight: 700,
                 mb: 1,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
+                flexWrap: 'wrap',
               }}
             >
               {theme.emoji} {theme.title}
             </Typography>
-            <Typography sx={{ fontSize: '14px', opacity: 0.9, mb: 1 }}>
+            <Typography sx={{ fontSize: { xs: '12px', md: '14px' }, opacity: 0.9, mb: 1 }}>
               {theme.dateRange}
             </Typography>
-            <Typography sx={{ fontSize: '16px', opacity: 0.95, mb: 3 }}>
+            <Typography sx={{ fontSize: { xs: '14px', md: '16px' }, opacity: 0.95, mb: 3 }}>
               {theme.description}
             </Typography>
             <Button
@@ -72,7 +75,9 @@ export const WeeklyThemeBanner = ({ theme }: WeeklyThemeBannerProps) => {
                 textTransform: 'none',
                 fontWeight: 600,
                 borderRadius: '8px',
-                px: 3,
+                px: { xs: 2, md: 3 },
+                py: { xs: 1, md: 1.25 },
+                fontSize: { xs: '13px', md: '14px' },
                 '&:hover': {
                   backgroundColor: '#F3F4F6',
                 },

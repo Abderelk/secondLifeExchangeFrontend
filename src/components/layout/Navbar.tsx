@@ -37,7 +37,7 @@ export const Navbar = () => {
 
   const handleProfile = () => {
     handleClose();
-    navigate('/dashboard');
+    navigate('/home');
   };
 
   const getUserInitials = () => {

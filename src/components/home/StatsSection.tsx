@@ -18,7 +18,7 @@ interface StatCardProps {
 const StatCard = ({ stat }: StatCardProps) => (
   <Card
     sx={{
-      p: 3,
+      p: { xs: 2.5, md: 3 },
       borderRadius: '16px',
       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
       border: '1px solid #E5E7EB',
@@ -30,7 +30,7 @@ const StatCard = ({ stat }: StatCardProps) => (
         {stat.title}
       </Typography>
     </Box>
-    <Typography sx={{ fontSize: '32px', fontWeight: 700, color: stat.color, mb: 0.5 }}>
+    <Typography sx={{ fontSize: { xs: '28px', md: '32px' }, fontWeight: 700, color: stat.color, mb: 0.5 }}>
       {stat.value}
     </Typography>
     <Typography sx={{ fontSize: '14px', color: '#9CA3AF' }}>
@@ -70,8 +70,14 @@ const defaultStats: StatItem[] = [
 
 export const StatsSection = ({ stats = defaultStats }: StatsSectionProps) => {
   return (
-    <Container maxWidth="lg" sx={{ mt: -3, position: 'relative', zIndex: 10 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
+    <Container maxWidth="lg" sx={{ mt: { xs: 2, md: -3 }, position: 'relative', zIndex: 10, px: { xs: 2, md: 3 } }}>
+      <Box 
+        sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
+          gap: { xs: 2, md: 3 } 
+        }}
+      >
         {stats.map((stat, index) => (
           <StatCard key={index} stat={stat} />
         ))}

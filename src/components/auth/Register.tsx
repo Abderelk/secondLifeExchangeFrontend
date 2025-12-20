@@ -270,7 +270,7 @@ export const Register = () => {
       };
 
       await register(registerData);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err) {
       const error = err as Error;
       const errorMessage = error.message || '';

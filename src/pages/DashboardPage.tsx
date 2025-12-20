@@ -1,4 +1,4 @@
-// src/pages/DashboardPage.tsx
+// src/pages/homePage.tsx
 
 import { useAuth } from '../context/AuthContext';
 import {
@@ -12,10 +12,10 @@ import {
   Avatar,
   LinearProgress
 } from '@mui/material';
-import { 
-  Recycling, 
-  SwapHoriz, 
-  Inventory, 
+import {
+  Recycling,
+  SwapHoriz,
+  Inventory,
   EmojiEvents,
   LocationOn,
   Email,
@@ -23,39 +23,39 @@ import {
 } from '@mui/icons-material';
 import { INTEREST_CATEGORIES } from '../types';
 
-export const DashboardPage = () => {
+export const homePage = () => {
   const { user } = useAuth();
 
   const impactLevel = user?.impactScore || 0;
   const impactPercentage = Math.min((impactLevel / 1000) * 100, 100);
 
   const stats = [
-    { 
-      title: 'Score Impact', 
-      value: user?.impactScore || 0, 
-      icon: Recycling, 
+    {
+      title: 'Score Impact',
+      value: user?.impactScore || 0,
+      icon: Recycling,
       color: 'bg-green-500',
       unit: 'pts'
     },
-    { 
-      title: 'Échanges réalisés', 
-      value: user?.totalExchanges || 0, 
-      icon: SwapHoriz, 
+    {
+      title: 'Échanges réalisés',
+      value: user?.totalExchanges || 0,
+      icon: SwapHoriz,
       color: 'bg-blue-500',
       unit: ''
     },
-    { 
-      title: 'Objets partagés', 
-      value: user?.totalObjectsShared || 0, 
-      icon: Inventory, 
+    {
+      title: 'Objets partagés',
+      value: user?.totalObjectsShared || 0,
+      icon: Inventory,
       color: 'bg-purple-500',
       unit: ''
     },
   ];
 
-  const getImpactLabel = (score: number): { 
-    label: string; 
-    color: 'default' | 'primary' | 'success' | 'warning' | 'error' 
+  const getImpactLabel = (score: number): {
+    label: string;
+    color: 'default' | 'primary' | 'success' | 'warning' | 'error'
   } => {
     if (score === 0) return { label: 'Débutant', color: 'default' };
     if (score < 100) return { label: 'Initié', color: 'primary' };
@@ -72,7 +72,7 @@ export const DashboardPage = () => {
         {/* En-tête du profil */}
         <Paper elevation={3} className="p-6 mb-6 bg-gradient-to-r from-emerald-600 to-green-600 text-white">
           <Box className="flex items-start gap-6">
-            <Avatar 
+            <Avatar
               sx={{ width: 100, height: 100, bgcolor: 'white', color: 'green' }}
               className="border-4 border-white"
             >
@@ -85,14 +85,14 @@ export const DashboardPage = () => {
                 <Typography variant="h4" className="font-bold">
                   {user?.firstName} {user?.lastName}
                 </Typography>
-                <Chip 
+                <Chip
                   label={impactBadge.label}
                   color="primary"
                   icon={<EmojiEvents />}
                   size="small"
                 />
               </div>
-              
+
               {user?.bio && (
                 <Typography variant="body1" className="opacity-90 mb-3">
                   {user.bio}
@@ -133,15 +133,15 @@ export const DashboardPage = () => {
                   Score: {impactLevel} points
                 </Typography>
               </div>
-              <Chip 
+              <Chip
                 label={impactBadge.label}
                 color={impactBadge.color}
                 icon={<Recycling />}
               />
             </div>
-            <LinearProgress 
-              variant="determinate" 
-              value={impactPercentage} 
+            <LinearProgress
+              variant="determinate"
+              value={impactPercentage}
               className="h-3 rounded-full"
               sx={{
                 backgroundColor: '#d1fae5',

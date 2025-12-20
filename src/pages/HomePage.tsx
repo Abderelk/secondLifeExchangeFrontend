@@ -5,10 +5,11 @@ import { Box, CircularProgress, Alert } from '@mui/material';
 import { TrendingUp, FavoriteBorder, ChatBubbleOutline } from '@mui/icons-material';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { WeeklyThemeBanner, type WeeklyTheme } from '../components/home/WeeklyThemeBanner';
 import { StatsSection, type StatItem } from '../components/home/StatsSection';
 import { ItemsGrid } from '../components/items/ItemsGrid';
-import type { Item } from '../components/items/ItemCard';
+import { type Item } from '../components/items/ItemCard';
 import { getHomeData } from '../services/homeService';
 import { toggleLike } from '../services/itemService';
 
@@ -74,11 +75,10 @@ export const HomePage = () => {
 
                 // Mettre à jour les stats avec les icônes React
                 if (data.stats) {
-                    const statsWithIcons: StatItem[] = data.stats.map((stat: StatItem) => ({
+                    const statsWithIcons = data.stats.map((stat) => ({
                         ...stat,
-                        icon: iconMap[stat.icon as string] ?? <TrendingUp />,
+                        icon: iconMap[stat.icon as unknown as string] || <TrendingUp />,
                     }));
-
                     setStats(statsWithIcons);
                 }
 
@@ -124,8 +124,7 @@ export const HomePage = () => {
 
     // Gérer la proposition d'échange
     const handleExchange = (itemId: string) => {
-        // TODO: Ouvrir modal d'échange ou naviguer vers la page d'échange
-        console.log('Proposer échange pour:', itemId);
+        console.log('Échange proposé pour:', itemId);
     };
 
     // Affichage loading
@@ -144,6 +143,7 @@ export const HomePage = () => {
                     <CircularProgress sx={{ color: '#22C55E' }} />
                 </Box>
                 <Footer />
+                <BottomNavigation />
             </Box>
         );
     }
@@ -153,7 +153,7 @@ export const HomePage = () => {
             <Header activePage="home" />
 
             {error && (
-                <Alert severity="error" sx={{ mx: 3, mt: 2 }}>
+                <Alert severity="error" sx={{ mx: { xs: 2, md: 3 }, mt: 2 }}>
                     {error}
                 </Alert>
             )}
@@ -170,6 +170,9 @@ export const HomePage = () => {
             />
 
             <Footer />
+
+            {/* Bottom Navigation pour mobile */}
+            <BottomNavigation />
         </Box>
     );
 };
