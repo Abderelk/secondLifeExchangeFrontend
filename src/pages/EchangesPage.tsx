@@ -107,7 +107,7 @@ export const ExchangesPage = () => {
 
     return (
         <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-            <Header activePage="exchanges" />
+            <Header activePage="messages" />
 
             <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
                 {/* Header */}

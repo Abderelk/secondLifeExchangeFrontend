@@ -70,7 +70,7 @@ export const Footer = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <FooterLink label="Accueil" onClick={() => navigate('/home')} />
               <FooterLink label="Calendrier" onClick={() => navigate('/calendar')} />
-              <FooterLink label="Échanges" onClick={() => navigate('/exchanges')} />
+              <FooterLink label="Messages" onClick={() => navigate('/messages')} />
             </Box>
           </Box>
 

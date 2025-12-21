@@ -5,7 +5,7 @@ import { Box, Container, Button, Typography } from '@mui/material';
 import {
   Home,
   CalendarMonth,
-  SwapHoriz,
+  ChatBubbleOutline,
   Person,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
@@ -38,7 +38,7 @@ const NavButton = ({ icon, label, active = false, onClick }: NavButtonProps) => 
 );
 
 interface HeaderProps {
-  activePage?: 'home' | 'calendar' | 'exchanges' | 'profile';
+  activePage?: 'home' | 'calendar' | 'messages' | 'profile';
 }
 
 export const Header = ({ activePage = 'home' }: HeaderProps) => {
@@ -92,10 +92,10 @@ export const Header = ({ activePage = 'home' }: HeaderProps) => {
               onClick={() => navigate('/calendar')}
             />
             <NavButton
-              icon={<SwapHoriz />}
-              label="Échanges"
-              active={activePage === 'exchanges'}
-              onClick={() => navigate('/exchanges')}
+              icon={<ChatBubbleOutline />}
+              label="Messages"
+              active={activePage === 'messages'}
+              onClick={() => navigate('/messages')}
             />
             <NavButton
               icon={<Person />}

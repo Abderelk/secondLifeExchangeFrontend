@@ -12,7 +12,9 @@ import ExchangesPage from './pages/EchangesPage';
 import AddItemPage from './pages/AddItemPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { EditProfilePage } from './pages/EditProfilePage';
+import { MessagesPage } from './pages/MessagesPage';
 
+// Dans les routes :
 function App() {
   return (
     <AuthProvider>
@@ -28,6 +30,7 @@ function App() {
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
             <Route path="/exchanges" element={<ProtectedRoute><ExchangesPage /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

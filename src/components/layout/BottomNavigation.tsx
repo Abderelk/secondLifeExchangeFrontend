@@ -7,8 +7,8 @@ import {
   HomeOutlined,
   CalendarMonth,
   CalendarMonthOutlined,
-  SwapHoriz,
-  SwapHorizOutlined,
+  ChatBubble,
+  ChatBubbleOutline,
   Person,
   PersonOutline,
 } from '@mui/icons-material';
@@ -34,10 +34,10 @@ const navItems: NavItem[] = [
     activeIcon: <CalendarMonth />,
   },
   {
-    path: '/exchanges',
-    label: 'Échanges',
-    icon: <SwapHorizOutlined />,
-    activeIcon: <SwapHoriz />,
+    path: '/messages',
+    label: 'Messages',
+    icon: <ChatBubbleOutline />,
+    activeIcon: <ChatBubble />,
   },
   {
     path: '/profile',
