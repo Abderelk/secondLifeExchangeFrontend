@@ -30,7 +30,6 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
 import {
     getConversations,
     getMessages,
@@ -39,6 +38,7 @@ import {
     type Message,
     type ConversationDetails,
 } from '../services/messageService';
+import socketService from '../services/socketService';
 
 // Status config
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactElement }> = {
@@ -51,8 +51,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
 
 export const MessagesPage = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
-    const { refreshUnreadCount } = useNotifications();
+    const { user, token } = useAuth();
 
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -63,7 +62,98 @@ export const MessagesPage = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [sending, setSending] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
+    const [typingUser, setTypingUser] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // 🔌 Initialiser Socket.IO
+    useEffect(() => {
+        if (token) {
+            console.log('🔌 Connecting to WebSocket...');
+            socketService.connect(token);
+
+            // Écouter les nouveaux messages
+            const unsubMessage = socketService.onNewMessage((data) => {
+                console.log('📩 New message received via WebSocket:', data);
+
+                // Si c'est pour la conversation actuelle, ajouter le message
+                if (selectedConversation?.id === data.conversationId) {
+                    // Ne pas ajouter si c'est notre propre message (déjà ajouté localement)
+                    if (data.message.senderId !== user?._id) {
+                        setMessages((prev) => {
+                            // Vérifier si le message existe déjà
+                            const exists = prev.some((m) => m.id === data.message.id);
+                            if (exists) return prev;
+
+                            return [...prev, {
+                                id: data.message.id,
+                                senderId: data.message.senderId,
+                                senderName: data.message.senderName,
+                                content: data.message.content,
+                                timestamp: data.message.timestamp,
+                                isOwn: false,
+                            }];
+                        });
+                    }
+                }
+
+                // Mettre à jour la liste des conversations
+                setConversations((prev) =>
+                    prev.map((c) =>
+                        c.id === data.conversationId
+                            ? {
+                                ...c,
+                                lastMessage: data.message.content,
+                                lastMessageAt: data.message.timestamp,
+                                unreadCount: selectedConversation?.id === data.conversationId ? 0 : c.unreadCount + 1,
+                            }
+                            : c
+                    )
+                );
+            });
+
+            // Écouter les mises à jour de conversation
+            const unsubConvUpdate = socketService.onConversationUpdate((data) => {
+                console.log('🔄 Conversation updated via WebSocket:', data);
+
+                setConversations((prev) =>
+                    prev.map((c) =>
+                        c.id === data.id
+                            ? {
+                                ...c,
+                                lastMessage: data.lastMessage,
+                                lastMessageAt: data.lastMessageAt,
+                                unreadCount: selectedConversation?.id === data.id ? 0 : data.unreadCount,
+                            }
+                            : c
+                    )
+                );
+            });
+
+            // Écouter les indicateurs de frappe
+            const unsubTyping = socketService.onTyping((data) => {
+                if (selectedConversation?.id === data.conversationId && data.userId !== user?._id) {
+                    setTypingUser(data.isTyping ? data.userId : null);
+                }
+            });
+
+            return () => {
+                unsubMessage();
+                unsubConvUpdate();
+                unsubTyping();
+                socketService.disconnect();
+            };
+        }
+    }, [token, user?._id, selectedConversation?.id]);
+
+    // Rejoindre/quitter la conversation sélectionnée
+    useEffect(() => {
+        if (selectedConversation?.id) {
+            socketService.joinConversation(selectedConversation.id);
+            socketService.markAsRead(selectedConversation.id);
+        }
+    }, [selectedConversation?.id]);
 
     // Charger les messages d'une conversation
     const fetchMessages = useCallback(async (conversationId: string) => {
@@ -71,24 +161,13 @@ export const MessagesPage = () => {
             setLoadingMessages(true);
             const data = await getMessages(conversationId);
             setConversationDetails(data);
-
-            // Recalculer isOwn côté frontend avec l'ID de l'utilisateur connecté
-            const currentUserId = user?._id;
-            const messagesWithCorrectOwnership = data.messages.map(msg => ({
-                ...msg,
-                isOwn: currentUserId ? msg.senderId === currentUserId : msg.isOwn,
-            }));
-
-            setMessages(messagesWithCorrectOwnership);
-
-            // Rafraîchir le compteur de messages non lus
-            refreshUnreadCount();
+            setMessages(data.messages);
         } catch (err) {
             console.error('Erreur chargement messages:', err);
         } finally {
             setLoadingMessages(false);
         }
-    }, [user?._id, refreshUnreadCount]);
+    }, []);
 
     // Sélectionner une conversation
     const handleSelectConversation = useCallback(async (conversation: Conversation) => {
@@ -103,10 +182,7 @@ export const MessagesPage = () => {
 
         // Charger les messages
         await fetchMessages(conversation.id);
-
-        // Rafraîchir le compteur de notifications
-        refreshUnreadCount();
-    }, [fetchMessages, refreshUnreadCount]);
+    }, [fetchMessages]);
 
     // Charger les conversations
     const fetchConversations = useCallback(async () => {
@@ -135,14 +211,41 @@ export const MessagesPage = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Gérer l'indicateur de frappe
+    const handleTyping = () => {
+        if (!selectedConversation) return;
+
+        if (!isTyping) {
+            setIsTyping(true);
+            socketService.startTyping(selectedConversation.id);
+        }
+
+        // Reset le timeout
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        typingTimeoutRef.current = setTimeout(() => {
+            setIsTyping(false);
+            socketService.stopTyping(selectedConversation.id);
+        }, 2000);
+    };
+
     const handleSendMessage = async () => {
         if (!newMessage.trim() || !selectedConversation || sending) return;
+
+        // Arrêter l'indicateur de frappe
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        setIsTyping(false);
+        socketService.stopTyping(selectedConversation.id);
 
         try {
             setSending(true);
             const sentMessage = await sendMessageApi(selectedConversation.id, newMessage);
 
-            // Ajouter le message à la liste
+            // Ajouter le message à la liste (le WebSocket l'enverra aux autres)
             setMessages(prev => [...prev, sentMessage]);
 
             // Mettre à jour la conversation dans la liste
@@ -289,10 +392,17 @@ export const MessagesPage = () => {
                         newMessage={newMessage}
                         loadingMessages={loadingMessages}
                         sending={sending}
-                        onNewMessageChange={setNewMessage}
+                        typingUser={typingUser}
+                        onNewMessageChange={(value) => {
+                            setNewMessage(value);
+                            handleTyping();
+                        }}
                         onSend={handleSendMessage}
                         onKeyPress={handleKeyPress}
                         onBack={() => {
+                            if (selectedConversation) {
+                                socketService.leaveConversation(selectedConversation.id);
+                            }
                             setSelectedConversation(null);
                             setConversationDetails(null);
                             setMessages([]);
@@ -393,7 +503,11 @@ export const MessagesPage = () => {
                             newMessage={newMessage}
                             loadingMessages={loadingMessages}
                             sending={sending}
-                            onNewMessageChange={setNewMessage}
+                            typingUser={typingUser}
+                            onNewMessageChange={(value) => {
+                                setNewMessage(value);
+                                handleTyping();
+                            }}
                             onSend={handleSendMessage}
                             onKeyPress={handleKeyPress}
                             messagesEndRef={messagesEndRef}
@@ -546,6 +660,7 @@ interface ChatViewProps {
     newMessage: string;
     loadingMessages: boolean;
     sending: boolean;
+    typingUser: string | null;
     onNewMessageChange: (value: string) => void;
     onSend: () => void;
     onKeyPress: (e: React.KeyboardEvent) => void;
@@ -564,6 +679,7 @@ const ChatView = ({
     newMessage,
     loadingMessages,
     sending,
+    typingUser,
     onNewMessageChange,
     onSend,
     onKeyPress,
@@ -614,11 +730,15 @@ const ChatView = ({
                             ? `${conversation.participant.firstName} ${conversation.participant.lastName}`
                             : 'Utilisateur'}
                     </Typography>
-                    {itemRequested && (
+                    {typingUser ? (
+                        <Typography sx={{ fontSize: '13px', color: '#22C55E', fontStyle: 'italic' }}>
+                            En train d'écrire...
+                        </Typography>
+                    ) : itemRequested ? (
                         <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
                             Échange : {itemRequested.title}
                         </Typography>
-                    )}
+                    ) : null}
                 </Box>
                 {status && (
                     <Chip
