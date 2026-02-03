@@ -24,8 +24,6 @@ import {
     LocationOn,
     Verified,
 } from '@mui/icons-material';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuth } from '../context/AuthContext';
 import { getUserItems } from '../services/itemService';
@@ -204,7 +202,6 @@ export const ProfilePage = () => {
 
     return (
         <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-            <Header activePage="profile" />
 
             <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 }, pb: { xs: 12, md: 6 } }}>
                 {/* Profile Header Card */}
@@ -610,8 +607,6 @@ export const ProfilePage = () => {
                     </>
                 )}
             </Container>
-
-            <Footer />
             <BottomNavigation />
         </Box>
     );

@@ -15,8 +15,6 @@ import {
     CircularProgress,
 } from '@mui/material';
 import { ArrowBack, CameraAlt } from '@mui/icons-material';
-import { Header } from '../components/layout/Header';
-import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -102,10 +100,8 @@ export const EditProfilePage = () => {
 
     return (
         <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-            <Header activePage="profile" />
 
             <Container maxWidth="sm" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 }, pb: { xs: 12, md: 4 } }}>
-                {/* Header */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                     <IconButton onClick={() => navigate(-1)}>
                         <ArrowBack />
@@ -286,7 +282,6 @@ export const EditProfilePage = () => {
                 </form>
             </Container>
 
-            <BottomNavigation />
         </Box>
     );
 };

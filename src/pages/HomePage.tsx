@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Box, CircularProgress, Alert } from '@mui/material';
 import { TrendingUp, FavoriteBorder, ChatBubbleOutline } from '@mui/icons-material';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
-import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { FloatingAddButton } from '../components/common/FloatingAddButton';
 import { WeeklyThemeBanner, type WeeklyTheme } from '../components/home/WeeklyThemeBanner';
 import { StatsSection, type StatItem } from '../components/home/StatsSection';
@@ -133,7 +130,6 @@ export const HomePage = () => {
     if (loading) {
         return (
             <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-                <Header activePage="home" />
                 <Box
                     sx={{
                         display: 'flex',
@@ -144,15 +140,12 @@ export const HomePage = () => {
                 >
                     <CircularProgress sx={{ color: '#22C55E' }} />
                 </Box>
-                <Footer />
-                <BottomNavigation />
             </Box>
         );
     }
 
     return (
         <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-            <Header activePage="home" />
 
             {error && (
                 <Alert severity="error" sx={{ mx: { xs: 2, md: 3 }, mt: 2 }}>
@@ -171,7 +164,6 @@ export const HomePage = () => {
                 onExchange={handleExchange}
             />
 
-            <Footer />
 
             {/* Bouton flottant pour ajouter un item */}
             <FloatingAddButton />
@@ -179,8 +171,6 @@ export const HomePage = () => {
             {/* Bouton flottant IA */}
             <AISuggestionsButton />
 
-            {/* Bottom Navigation pour mobile */}
-            <BottomNavigation />
         </Box>
     );
 };

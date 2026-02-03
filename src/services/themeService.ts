@@ -1,100 +1,138 @@
-// src/services/themeService.ts
+// FRONTEND/src/services/themeService.ts
 
 import api from './api';
 
-export interface WeeklyTheme {
+// Types
+export interface Theme {
     _id: string;
-    title: string;
-    emoji: string;
+    name: string;
     description: string;
-    categories: string[];
+    icon: string;
     startDate: string;
     endDate: string;
+    categories: string[];
     isActive: boolean;
-    itemsCount: number;
-    participantsCount: number;
-    daysRemaining?: number;
-    status?: 'past' | 'current' | 'upcoming';
+    status: 'past' | 'current' | 'upcoming';
+    weekNumber: number;
+    daysRemaining: number;
+    dateRange: string;
     createdAt: string;
     updatedAt: string;
 }
 
-export interface NotificationPreferences {
-    email: boolean;
-    weeklyTheme: boolean;
-    newMessages: boolean;
-    exchangeUpdates: boolean;
+export interface CalendarResponse {
+    success: boolean;
+    year: number;
+    count: number;
+    data: Theme[];
 }
 
-// Obtenir le thème actuel
-export const getCurrentTheme = async (): Promise<WeeklyTheme> => {
-    const response = await api.get('/themes/current');
+export interface ThemeResponse {
+    success: boolean;
+    data: Theme;
+    message?: string;
+}
+
+export interface ThemesResponse {
+    success: boolean;
+    count: number;
+    data: Theme[];
+}
+
+// Services
+
+/**
+ * Récupérer tous les thèmes avec filtres optionnels
+ */
+export const getAllThemes = async (params?: {
+    year?: number;
+    month?: number;
+    status?: 'past' | 'current' | 'upcoming';
+    limit?: number;
+}): Promise<Theme[]> => {
+    const queryParams = new URLSearchParams();
+    if (params?.year) queryParams.append('year', params.year.toString());
+    if (params?.month) queryParams.append('month', params.month.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const response = await api.get<ThemesResponse>(`/themes?${queryParams.toString()}`);
     return response.data.data;
 };
 
-// Obtenir le calendrier des thèmes
-export const getThemeCalendar = async (month?: number, year?: number): Promise<WeeklyTheme[]> => {
-    const params = new URLSearchParams();
-    if (month) params.append('month', month.toString());
-    if (year) params.append('year', year.toString());
+/**
+ * Récupérer le thème actuel
+ */
+export const getCurrentTheme = async (): Promise<Theme | null> => {
+    try {
+        const response = await api.get<ThemeResponse>('/themes/current');
+        return response.data.data;
+    } catch (error) {
+        console.error('Erreur getCurrentTheme:', error);
+        return null;
+    }
+};
 
-    const response = await api.get(`/themes/calendar?${params.toString()}`);
+/**
+ * Récupérer le calendrier des thèmes pour une année
+ */
+export const getCalendar = async (year?: number): Promise<Theme[]> => {
+    const queryParams = year ? `?year=${year}` : '';
+    const response = await api.get<CalendarResponse>(`/themes/calendar${queryParams}`);
     return response.data.data;
 };
 
-// Obtenir les prochains thèmes
-export const getUpcomingThemes = async (): Promise<WeeklyTheme[]> => {
-    const response = await api.get('/themes/upcoming');
+/**
+ * Récupérer les prochains thèmes
+ */
+export const getUpcomingThemes = async (limit: number = 5): Promise<Theme[]> => {
+    const response = await api.get<ThemesResponse>(`/themes/upcoming?limit=${limit}`);
     return response.data.data;
 };
 
-// Obtenir les préférences de notification
-export const getNotificationPreferences = async (): Promise<NotificationPreferences> => {
-    const response = await api.get('/themes/notifications/preferences');
+/**
+ * Récupérer un thème par ID
+ */
+export const getThemeById = async (id: string): Promise<Theme> => {
+    const response = await api.get<ThemeResponse>(`/themes/${id}`);
     return response.data.data;
 };
 
-// Mettre à jour les préférences de notification
-export const updateNotificationPreferences = async (
-    preferences: Partial<NotificationPreferences>
-): Promise<NotificationPreferences> => {
-    const response = await api.put('/themes/notifications/preferences', preferences);
+// Admin functions
+
+/**
+ * Créer un nouveau thème (Admin)
+ */
+export const createTheme = async (theme: Partial<Theme>): Promise<Theme> => {
+    const response = await api.post<ThemeResponse>('/themes', theme);
     return response.data.data;
 };
 
-// === Admin only ===
-
-// Créer un nouveau thème (Admin)
-export const createTheme = async (theme: Partial<WeeklyTheme>): Promise<WeeklyTheme> => {
-    const response = await api.post('/themes', theme);
+/**
+ * Mettre à jour un thème (Admin)
+ */
+export const updateTheme = async (id: string, theme: Partial<Theme>): Promise<Theme> => {
+    const response = await api.put<ThemeResponse>(`/themes/${id}`, theme);
     return response.data.data;
 };
 
-// Mettre à jour un thème (Admin)
-export const updateTheme = async (id: string, theme: Partial<WeeklyTheme>): Promise<WeeklyTheme> => {
-    const response = await api.put(`/themes/${id}`, theme);
-    return response.data.data;
-};
-
-// Supprimer un thème (Admin)
+/**
+ * Supprimer un thème (Admin)
+ */
 export const deleteTheme = async (id: string): Promise<void> => {
     await api.delete(`/themes/${id}`);
 };
 
-// Envoyer les notifications pour un thème (Admin)
-export const sendThemeNotifications = async (themeId: string): Promise<{ total: number; sent: number; failed: number }> => {
-    const response = await api.post(`/themes/${themeId}/notify`);
-    return response.data.data;
-};
-
-export default {
+// Export par défaut
+const themeService = {
+    getAllThemes,
     getCurrentTheme,
-    getThemeCalendar,
+    getCalendar,
     getUpcomingThemes,
-    getNotificationPreferences,
-    updateNotificationPreferences,
+    getThemeById,
     createTheme,
     updateTheme,
     deleteTheme,
-    sendThemeNotifications,
 };
+
+export default themeService;

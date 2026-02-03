@@ -26,9 +26,6 @@ import {
   Schedule,
   Cancel,
 } from '@mui/icons-material';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
-import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuth } from '../context/AuthContext';
 import {
   getConversations,
@@ -68,7 +65,7 @@ export const MessagesPage = () => {
   const [exchangeLoading, setExchangeLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   // Refs pour éviter les problèmes de dépendances dans useEffect
   const selectedConversationRef = useRef<Conversation | null>(null);
   const userIdRef = useRef<string | undefined>(undefined);
@@ -93,17 +90,17 @@ export const MessagesPage = () => {
     const unsubMessage = socketService.onNewMessage((data) => {
       console.log('📩 ====== NEW MESSAGE EVENT ======');
       console.log('📩 Data:', JSON.stringify(data, null, 2));
-      
+
       const currentConvId = selectedConversationRef.current?.id;
       const currentUserId = userIdRef.current;
-      
+
       console.log('📩 Current conversation ID:', currentConvId);
       console.log('📩 Message conversation ID:', data.conversationId);
       console.log('📩 Match?', currentConvId === data.conversationId);
       console.log('📩 Current user ID:', currentUserId);
       console.log('📩 Message sender ID:', data.message.senderId);
       console.log('📩 Is different user?', data.message.senderId !== currentUserId);
-      
+
       // Si c'est pour la conversation actuelle, ajouter le message
       if (currentConvId === data.conversationId) {
         // Ne pas ajouter si c'est notre propre message (déjà ajouté localement)
@@ -116,7 +113,7 @@ export const MessagesPage = () => {
               console.log('⚠️ Message already exists');
               return prev;
             }
-            
+
             console.log('✅ Message added!');
             return [...prev, {
               id: data.message.id,
@@ -139,11 +136,11 @@ export const MessagesPage = () => {
         prev.map((c) =>
           c.id === data.conversationId
             ? {
-                ...c,
-                lastMessage: data.message.content,
-                lastMessageAt: data.message.timestamp,
-                unreadCount: currentConvId === data.conversationId ? 0 : c.unreadCount + 1,
-              }
+              ...c,
+              lastMessage: data.message.content,
+              lastMessageAt: data.message.timestamp,
+              unreadCount: currentConvId === data.conversationId ? 0 : c.unreadCount + 1,
+            }
             : c
         )
       );
@@ -152,18 +149,18 @@ export const MessagesPage = () => {
     // Écouter les mises à jour de conversation
     const unsubConvUpdate = socketService.onConversationUpdate((data) => {
       console.log('🔄 Conversation updated via WebSocket:', data);
-      
+
       const currentConvId = selectedConversationRef.current?.id;
-      
+
       setConversations((prev) =>
         prev.map((c) =>
           c.id === data.id
             ? {
-                ...c,
-                lastMessage: data.lastMessage,
-                lastMessageAt: data.lastMessageAt,
-                unreadCount: currentConvId === data.id ? 0 : data.unreadCount,
-              }
+              ...c,
+              lastMessage: data.lastMessage,
+              lastMessageAt: data.lastMessageAt,
+              unreadCount: currentConvId === data.id ? 0 : data.unreadCount,
+            }
             : c
         )
       );
@@ -173,7 +170,7 @@ export const MessagesPage = () => {
     const unsubTyping = socketService.onTyping((data) => {
       const currentConvId = selectedConversationRef.current?.id;
       const currentUserId = userIdRef.current;
-      
+
       if (currentConvId === data.conversationId && data.userId !== currentUserId) {
         setTypingUser(data.isTyping ? data.userId : null);
       }
@@ -212,14 +209,14 @@ export const MessagesPage = () => {
   // Sélectionner une conversation
   const handleSelectConversation = useCallback(async (conversation: Conversation) => {
     setSelectedConversation(conversation);
-    
+
     // Marquer comme lu localement
     setConversations(prev =>
       prev.map(c =>
         c.id === conversation.id ? { ...c, unreadCount: 0 } : c
       )
     );
-    
+
     // Charger les messages
     await fetchMessages(conversation.id);
   }, [fetchMessages]);
@@ -230,7 +227,7 @@ export const MessagesPage = () => {
       setLoading(true);
       const data = await getConversations();
       setConversations(data);
-      
+
       // Sélectionner la première conversation par défaut (desktop only)
       if (data.length > 0 && window.innerWidth >= 900) {
         handleSelectConversation(data[0]);
@@ -284,10 +281,10 @@ export const MessagesPage = () => {
     try {
       setSending(true);
       const sentMessage = await sendMessageApi(selectedConversation.id, newMessage);
-      
+
       // Ajouter le message à la liste (le WebSocket l'enverra aux autres)
       setMessages(prev => [...prev, sentMessage]);
-      
+
       // Mettre à jour la conversation dans la liste
       setConversations(prev =>
         prev.map(c =>
@@ -296,7 +293,7 @@ export const MessagesPage = () => {
             : c
         )
       );
-      
+
       setNewMessage('');
     } catch (err) {
       console.error('Erreur envoi message:', err);
@@ -320,7 +317,7 @@ export const MessagesPage = () => {
     try {
       setExchangeLoading(true);
       await respondToExchange(exchangeId, { action: 'accept' });
-      
+
       // Mettre à jour le statut localement
       setConversationDetails(prev => prev ? {
         ...prev,
@@ -344,7 +341,7 @@ export const MessagesPage = () => {
 
       // Envoyer un message système
       await sendMessageApi(selectedConversation!.id, "✅ J'ai accepté votre proposition d'échange !");
-      
+
     } catch (err) {
       console.error('Erreur acceptation échange:', err);
     } finally {
@@ -360,7 +357,7 @@ export const MessagesPage = () => {
     try {
       setExchangeLoading(true);
       await respondToExchange(exchangeId, { action: 'reject' });
-      
+
       // Mettre à jour le statut localement
       setConversationDetails(prev => prev ? {
         ...prev,
@@ -384,7 +381,7 @@ export const MessagesPage = () => {
 
       // Envoyer un message système
       await sendMessageApi(selectedConversation!.id, "❌ J'ai refusé votre proposition d'échange.");
-      
+
     } catch (err) {
       console.error('Erreur refus échange:', err);
     } finally {
@@ -428,7 +425,6 @@ export const MessagesPage = () => {
   if (!loading && conversations.length === 0) {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-        <Header activePage="messages" />
         <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
           <Typography variant="h5" sx={{ mb: 2, color: '#1F2937' }}>
             💬 Aucune conversation
@@ -449,15 +445,12 @@ export const MessagesPage = () => {
             Découvrir les objets
           </Button>
         </Container>
-        <Footer />
-        <BottomNavigation />
       </Box>
     );
   }
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-      <Header activePage="messages" />
 
       {/* Mobile View */}
       <Box sx={{ display: { xs: 'block', md: 'none' } }}>
@@ -657,8 +650,6 @@ export const MessagesPage = () => {
         </Box>
       </Container>
 
-      <Footer />
-      <BottomNavigation />
     </Box>
   );
 };
@@ -995,47 +986,47 @@ const ChatView = ({
           </Box>
 
           {/* Action Buttons - Only show for owner when exchange is pending */}
-          {conversationDetails?.conversation.isOwner && 
-           conversationDetails?.conversation.exchangeStatus === 'pending' && (
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 2 }}>
-              <Button
-                variant="contained"
-                onClick={onAcceptExchange}
-                disabled={exchangeLoading}
-                startIcon={exchangeLoading ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CheckCircle />}
-                sx={{
-                  backgroundColor: '#22C55E',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  borderRadius: '10px',
-                  px: 3,
-                  '&:hover': { backgroundColor: '#16A34A' },
-                }}
-              >
-                Accepter
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={onRejectExchange}
-                disabled={exchangeLoading}
-                startIcon={exchangeLoading ? <CircularProgress size={16} /> : <Cancel />}
-                sx={{
-                  borderColor: '#EF4444',
-                  color: '#EF4444',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  borderRadius: '10px',
-                  px: 3,
-                  '&:hover': { 
-                    borderColor: '#DC2626',
-                    backgroundColor: '#FEF2F2',
-                  },
-                }}
-              >
-                Refuser
-              </Button>
-            </Box>
-          )}
+          {conversationDetails?.conversation.isOwner &&
+            conversationDetails?.conversation.exchangeStatus === 'pending' && (
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={onAcceptExchange}
+                  disabled={exchangeLoading}
+                  startIcon={exchangeLoading ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CheckCircle />}
+                  sx={{
+                    backgroundColor: '#22C55E',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    px: 3,
+                    '&:hover': { backgroundColor: '#16A34A' },
+                  }}
+                >
+                  Accepter
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={onRejectExchange}
+                  disabled={exchangeLoading}
+                  startIcon={exchangeLoading ? <CircularProgress size={16} /> : <Cancel />}
+                  sx={{
+                    borderColor: '#EF4444',
+                    color: '#EF4444',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    px: 3,
+                    '&:hover': {
+                      borderColor: '#DC2626',
+                      backgroundColor: '#FEF2F2',
+                    },
+                  }}
+                >
+                  Refuser
+                </Button>
+              </Box>
+            )}
         </Box>
       )}
 

@@ -1,52 +1,61 @@
-import { Box, Typography } from '@mui/material';
+// FRONTEND/src/components/calendar/HowItWorks.tsx
 
-const HowItWorks = () => {
-    const steps = [
-        { bold: 'Chaque lundi', text: ', un nouveau thème est lancé' },
-        { bold: 'Proposez vos objets', text: ' correspondant au thème de la semaine' },
-        { bold: 'Découvrez', text: ' ce que les autres membres proposent' },
-        { bold: 'Contactez', text: ' les personnes pour organiser un échange' },
-        { bold: 'Partagez votre expérience', text: " et encouragez l'économie circulaire !" },
-    ];
+import React from 'react';
+import { Box, Typography, Paper, Grid } from '@mui/material';
 
-    return (
-        <Box
-            sx={{
-                backgroundColor: '#EFF6FF',
-                borderRadius: '16px',
-                padding: 3,
-                mt: 5,
-            }}
-        >
-            <Typography variant="subtitle1" fontWeight={600} color="#1F2937" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-                <span>💡</span>
-                Comment ça marche ?
-            </Typography>
+const steps = [
+  {
+    icon: '1️⃣',
+    title: 'Consultez le thème',
+    description: "Chaque semaine, un nouveau thème est proposé pour orienter vos échanges.",
+  },
+  {
+    icon: '2️⃣',
+    title: 'Proposez vos objets',
+    description: "Publiez les objets que vous souhaitez échanger en lien avec le thème.",
+  },
+  {
+    icon: '3️⃣',
+    title: 'Échangez !',
+    description: "Trouvez ce qui vous intéresse et contactez les autres membres pour échanger.",
+  },
+];
 
-            <Box component="ul" sx={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                {steps.map((step, index) => (
-                    <Box
-                        component="li"
-                        key={index}
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 1,
-                            mb: 1.5,
-                            color: '#374151',
-                            fontSize: '14px',
-                        }}
-                    >
-                        <span style={{ color: '#9CA3AF' }}>•</span>
-                        <span>
-                            <strong style={{ color: '#1F2937' }}>{step.bold}</strong>
-                            {step.text}
-                        </span>
-                    </Box>
-                ))}
+const HowItWorks: React.FC = () => {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        mt: 6,
+        p: 4,
+        bgcolor: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: 2,
+      }}
+    >
+      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+        💡 Comment ça marche ?
+      </Typography>
+      
+      <Grid container spacing={3}>
+        {steps.map((step, index) => (
+          <Grid key={index} size={{ xs: 12, md: 4 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" sx={{ mb: 1 }}>
+                {step.icon}
+              </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {step.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {step.description}
+              </Typography>
             </Box>
-        </Box>
-    );
+          </Grid>
+        ))}
+      </Grid>
+    </Paper>
+  );
 };
 
 export default HowItWorks;

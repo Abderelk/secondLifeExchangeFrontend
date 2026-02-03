@@ -17,8 +17,6 @@ import {
   AddPhotoAlternate,
   Close,
 } from '@mui/icons-material';
-import { Header } from '../components/layout/Header';
-import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { createItem } from '../services/itemService';
 
 const categories = [
@@ -137,7 +135,6 @@ export const AddItemPage = () => {
   if (success) {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-        <Header />
         <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
           <Box
             sx={{
@@ -161,14 +158,12 @@ export const AddItemPage = () => {
             Votre objet est maintenant visible par la communauté.
           </Typography>
         </Container>
-        <BottomNavigation />
       </Box>
     );
   }
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-      <Header />
 
       <Container maxWidth="sm" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 }, pb: { xs: 12, md: 4 } }}>
         {/* Header */}
@@ -383,7 +378,6 @@ export const AddItemPage = () => {
         </form>
       </Container>
 
-      <BottomNavigation />
     </Box>
   );
 };

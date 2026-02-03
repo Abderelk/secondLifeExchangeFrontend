@@ -12,9 +12,6 @@ import {
     Button,
 } from '@mui/material';
 import { SwapHoriz, Inbox, Send } from '@mui/icons-material';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
-import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { ExchangeRequestCard } from '../components/exchange/ExchangeRequestCard';
 import {
     getMyExchanges,
@@ -107,7 +104,6 @@ export const ExchangesPage = () => {
 
     return (
         <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-            <Header activePage="messages" />
 
             <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
                 {/* Header */}
@@ -248,11 +244,6 @@ export const ExchangesPage = () => {
                     </Box>
                 )}
             </Container>
-
-            <Footer />
-
-            {/* Bottom Navigation pour mobile */}
-            <BottomNavigation />
         </Box>
     );
 };
