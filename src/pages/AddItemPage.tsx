@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Container, Button, Alert, CircularProgress } from '@mui/material';
+import { Box, Container, Button, Alert, CircularProgress, Typography } from '@mui/material';
 import { createItem } from '../services/itemService';
 import {
-  ImageUploadSection,
   ItemFormFields,
   LocationInput,
   SuccessScreen,
   PageHeader,
 } from '../components/addItem';
+import ImagePicker from '../components/imagePicker/imagePicker';
 
 type Condition = 'neuf' | 'très bon' | 'bon' | 'correct' | 'usé';
 
@@ -33,7 +33,6 @@ export const AddItemPage = () => {
     postalCode: '',
   });
   const [images, setImages] = useState<string[]>([]);
-  const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -41,17 +40,6 @@ export const AddItemPage = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleAddImage = () => {
-    if (imageUrl && images.length < 5) {
-      setImages(prev => [...prev, imageUrl]);
-      setImageUrl('');
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,6 +60,11 @@ export const AddItemPage = () => {
       return;
     }
 
+    if (images.length === 0) {
+      setError('Veuillez ajouter au moins une photo');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -81,7 +74,7 @@ export const AddItemPage = () => {
         description: formData.description,
         category: formData.category,
         condition: formData.condition as Condition,
-        images: images.length > 0 ? images : ['https://via.placeholder.com/400?text=No+Image'],
+        images: images,
         location: {
           city: formData.city,
           postalCode: formData.postalCode,
@@ -116,13 +109,30 @@ export const AddItemPage = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-          <ImageUploadSection
-            images={images}
-            imageUrl={imageUrl}
-            onImageUrlChange={setImageUrl}
-            onAddImage={handleAddImage}
-            onRemoveImage={handleRemoveImage}
-          />
+          {/* Section Photos avec ImagePicker */}
+          <Box
+            sx={{
+              backgroundColor: '#fff',
+              borderRadius: '16px',
+              p: 3,
+              mb: 3,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            }}
+          >
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, mb: 2, color: '#1F2937' }}
+            >
+              Photos de l'objet *
+            </Typography>
+
+            <ImagePicker
+              images={images}
+              onChange={setImages}
+              maxImages={5}
+              disabled={loading}
+            />
+          </Box>
 
           <ItemFormFields
             title={formData.title}
