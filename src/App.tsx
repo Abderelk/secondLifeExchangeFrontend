@@ -13,6 +13,7 @@ import AddItemPage from './pages/AddItemPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { EditProfilePage } from './pages/EditProfilePage';
 import { MessagesPage } from './pages/MessagesPage';
+import ThemeCalendarPage from './pages/ThemeCalendarPage';
 
 // Dans les routes :
 function App() {
@@ -31,6 +32,7 @@ function App() {
             <Route path="/profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
             <Route path="/exchanges" element={<ProtectedRoute><ExchangesPage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ThemeCalendarPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
