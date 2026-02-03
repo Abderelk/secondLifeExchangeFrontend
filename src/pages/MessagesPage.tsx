@@ -1,304 +1,78 @@
 // src/pages/MessagesPage.tsx
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
   Typography,
-  Avatar,
   TextField,
-  IconButton,
-  Badge,
   InputAdornment,
-  Chip,
   CircularProgress,
-  Card,
-  CardMedia,
-  Button,
 } from '@mui/material';
-import {
-  Search,
-  Send,
-  ArrowBack,
-  SwapHoriz,
-  CheckCircle,
-  Schedule,
-  Cancel,
-} from '@mui/icons-material';
+import { Search } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import { useMessages } from '../hooks/useMessages';
 import {
-  getConversations,
-  getMessages,
-  sendMessage as sendMessageApi,
-  type Message,
-  type Conversation,
-  type ConversationDetails,
-} from '../services/messageService';
-import { respondToExchange } from '../services/exchangeService';
-import socketService from '../services/socketService';
+  ConversationsList,
+  ChatView,
+  EmptyState,
+} from '../components/messages';
 
-// Status config
-const statusConfig: Record<string, { label: string; color: string; icon: React.ReactElement }> = {
-  pending: { label: 'En attente', color: '#F59E0B', icon: <Schedule sx={{ fontSize: 16 }} /> },
-  accepted: { label: 'Accepté', color: '#22C55E', icon: <CheckCircle sx={{ fontSize: 16 }} /> },
-  completed: { label: 'Terminé', color: '#6B7280', icon: <CheckCircle sx={{ fontSize: 16 }} /> },
-  rejected: { label: 'Refusé', color: '#EF4444', icon: <Cancel sx={{ fontSize: 16 }} /> },
-  cancelled: { label: 'Annulé', color: '#6B7280', icon: <Cancel sx={{ fontSize: 16 }} /> },
+const getInitials = (firstName: string, lastName: string) =>
+  `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return "À l'instant";
+  if (diffMins < 60) return `Il y a ${diffMins} min`;
+  if (diffHours < 24) return `Il y a ${diffHours}h`;
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays} jours`;
+  return date.toLocaleDateString('fr-FR');
 };
+
+const formatMessageTime = (dateString: string) =>
+  new Date(dateString).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 export const MessagesPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
-
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [conversationDetails, setConversationDetails] = useState<ConversationDetails | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [typingUser, setTypingUser] = useState<string | null>(null);
-  const [exchangeLoading, setExchangeLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Refs pour éviter les problèmes de dépendances dans useEffect
-  const selectedConversationRef = useRef<Conversation | null>(null);
-  const userIdRef = useRef<string | undefined>(undefined);
+  const {
+    conversations,
+    selectedConversation,
+    conversationDetails,
+    messages,
+    loading,
+    loadingMessages,
+    sending,
+    typingUser,
+    exchangeLoading,
+    selectConversation,
+    sendMessage,
+    acceptExchange,
+    rejectExchange,
+    closeChat,
+    handleTyping,
+  } = useMessages({ token, userId: user?._id });
 
-  // Mettre à jour les refs quand les valeurs changent
-  useEffect(() => {
-    selectedConversationRef.current = selectedConversation;
-  }, [selectedConversation]);
-
-  useEffect(() => {
-    userIdRef.current = user?._id;
-  }, [user?._id]);
-
-  // 🔌 Initialiser Socket.IO
-  useEffect(() => {
-    if (!token) return;
-
-    console.log('🔌 Connecting to WebSocket...');
-    socketService.connect(token);
-
-    // Écouter les nouveaux messages
-    const unsubMessage = socketService.onNewMessage((data) => {
-      console.log('📩 ====== NEW MESSAGE EVENT ======');
-      console.log('📩 Data:', JSON.stringify(data, null, 2));
-
-      const currentConvId = selectedConversationRef.current?.id;
-      const currentUserId = userIdRef.current;
-
-      console.log('📩 Current conversation ID:', currentConvId);
-      console.log('📩 Message conversation ID:', data.conversationId);
-      console.log('📩 Match?', currentConvId === data.conversationId);
-      console.log('📩 Current user ID:', currentUserId);
-      console.log('📩 Message sender ID:', data.message.senderId);
-      console.log('📩 Is different user?', data.message.senderId !== currentUserId);
-
-      // Si c'est pour la conversation actuelle, ajouter le message
-      if (currentConvId === data.conversationId) {
-        // Ne pas ajouter si c'est notre propre message (déjà ajouté localement)
-        if (data.message.senderId !== currentUserId) {
-          console.log('✅ ADDING MESSAGE TO STATE');
-          setMessages((prev) => {
-            // Vérifier si le message existe déjà
-            const exists = prev.some((m) => m.id === data.message.id);
-            if (exists) {
-              console.log('⚠️ Message already exists');
-              return prev;
-            }
-
-            console.log('✅ Message added!');
-            return [...prev, {
-              id: data.message.id,
-              senderId: data.message.senderId,
-              senderName: data.message.senderName,
-              content: data.message.content,
-              timestamp: data.message.timestamp,
-              isOwn: false,
-            }];
-          });
-        } else {
-          console.log('⏭️ Skipping - own message');
-        }
-      } else {
-        console.log('⏭️ Skipping - different conversation');
-      }
-
-      // Mettre à jour la liste des conversations
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === data.conversationId
-            ? {
-              ...c,
-              lastMessage: data.message.content,
-              lastMessageAt: data.message.timestamp,
-              unreadCount: currentConvId === data.conversationId ? 0 : c.unreadCount + 1,
-            }
-            : c
-        )
-      );
-    });
-
-    // Écouter les mises à jour de conversation
-    const unsubConvUpdate = socketService.onConversationUpdate((data) => {
-      console.log('🔄 Conversation updated via WebSocket:', data);
-
-      const currentConvId = selectedConversationRef.current?.id;
-
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === data.id
-            ? {
-              ...c,
-              lastMessage: data.lastMessage,
-              lastMessageAt: data.lastMessageAt,
-              unreadCount: currentConvId === data.id ? 0 : data.unreadCount,
-            }
-            : c
-        )
-      );
-    });
-
-    // Écouter les indicateurs de frappe
-    const unsubTyping = socketService.onTyping((data) => {
-      const currentConvId = selectedConversationRef.current?.id;
-      const currentUserId = userIdRef.current;
-
-      if (currentConvId === data.conversationId && data.userId !== currentUserId) {
-        setTypingUser(data.isTyping ? data.userId : null);
-      }
-    });
-
-    return () => {
-      unsubMessage();
-      unsubConvUpdate();
-      unsubTyping();
-      socketService.disconnect();
-    };
-  }, [token]);
-
-  // Rejoindre/quitter la conversation sélectionnée
-  useEffect(() => {
-    if (selectedConversation?.id) {
-      socketService.joinConversation(selectedConversation.id);
-      socketService.markAsRead(selectedConversation.id);
-    }
-  }, [selectedConversation?.id]);
-
-  // Charger les messages d'une conversation
-  const fetchMessages = useCallback(async (conversationId: string) => {
-    try {
-      setLoadingMessages(true);
-      const data = await getMessages(conversationId);
-      setConversationDetails(data);
-      setMessages(data.messages);
-    } catch (err) {
-      console.error('Erreur chargement messages:', err);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, []);
-
-  // Sélectionner une conversation
-  const handleSelectConversation = useCallback(async (conversation: Conversation) => {
-    setSelectedConversation(conversation);
-
-    // Marquer comme lu localement
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === conversation.id ? { ...c, unreadCount: 0 } : c
-      )
-    );
-
-    // Charger les messages
-    await fetchMessages(conversation.id);
-  }, [fetchMessages]);
-
-  // Charger les conversations
-  const fetchConversations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await getConversations();
-      setConversations(data);
-
-      // Sélectionner la première conversation par défaut (desktop only)
-      if (data.length > 0 && window.innerWidth >= 900) {
-        handleSelectConversation(data[0]);
-      }
-    } catch (err) {
-      console.error('Erreur chargement conversations:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [handleSelectConversation]);
-
-  useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
-
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Gérer l'indicateur de frappe
-  const handleTyping = () => {
-    if (!selectedConversation) return;
-
-    if (!isTyping) {
-      setIsTyping(true);
-      socketService.startTyping(selectedConversation.id);
-    }
-
-    // Reset le timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      socketService.stopTyping(selectedConversation.id);
-    }, 2000);
-  };
-
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || sending) return;
-
-    // Arrêter l'indicateur de frappe
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    setIsTyping(false);
-    socketService.stopTyping(selectedConversation.id);
-
-    try {
-      setSending(true);
-      const sentMessage = await sendMessageApi(selectedConversation.id, newMessage);
-
-      // Ajouter le message à la liste (le WebSocket l'enverra aux autres)
-      setMessages(prev => [...prev, sentMessage]);
-
-      // Mettre à jour la conversation dans la liste
-      setConversations(prev =>
-        prev.map(c =>
-          c.id === selectedConversation.id
-            ? { ...c, lastMessage: newMessage, lastMessageAt: new Date().toISOString() }
-            : c
-        )
-      );
-
+    if (await sendMessage(newMessage)) {
       setNewMessage('');
-    } catch (err) {
-      console.error('Erreur envoi message:', err);
-    } finally {
-      setSending(false);
     }
   };
 
@@ -309,111 +83,6 @@ export const MessagesPage = () => {
     }
   };
 
-  // Accepter un échange
-  const handleAcceptExchange = async () => {
-    const exchangeId = conversationDetails?.conversation.exchangeId;
-    if (!exchangeId || exchangeLoading) return;
-
-    try {
-      setExchangeLoading(true);
-      await respondToExchange(exchangeId, { action: 'accept' });
-
-      // Mettre à jour le statut localement
-      setConversationDetails(prev => prev ? {
-        ...prev,
-        conversation: {
-          ...prev.conversation,
-          exchangeStatus: 'accepted',
-        },
-      } : null);
-
-      // Mettre à jour dans la liste des conversations
-      if (selectedConversation) {
-        setConversations(prev =>
-          prev.map(c =>
-            c.id === selectedConversation.id
-              ? { ...c, exchangeStatus: 'accepted' }
-              : c
-          )
-        );
-        setSelectedConversation(prev => prev ? { ...prev, exchangeStatus: 'accepted' } : null);
-      }
-
-      // Envoyer un message système
-      await sendMessageApi(selectedConversation!.id, "✅ J'ai accepté votre proposition d'échange !");
-
-    } catch (err) {
-      console.error('Erreur acceptation échange:', err);
-    } finally {
-      setExchangeLoading(false);
-    }
-  };
-
-  // Refuser un échange
-  const handleRejectExchange = async () => {
-    const exchangeId = conversationDetails?.conversation.exchangeId;
-    if (!exchangeId || exchangeLoading) return;
-
-    try {
-      setExchangeLoading(true);
-      await respondToExchange(exchangeId, { action: 'reject' });
-
-      // Mettre à jour le statut localement
-      setConversationDetails(prev => prev ? {
-        ...prev,
-        conversation: {
-          ...prev.conversation,
-          exchangeStatus: 'rejected',
-        },
-      } : null);
-
-      // Mettre à jour dans la liste des conversations
-      if (selectedConversation) {
-        setConversations(prev =>
-          prev.map(c =>
-            c.id === selectedConversation.id
-              ? { ...c, exchangeStatus: 'rejected' }
-              : c
-          )
-        );
-        setSelectedConversation(prev => prev ? { ...prev, exchangeStatus: 'rejected' } : null);
-      }
-
-      // Envoyer un message système
-      await sendMessageApi(selectedConversation!.id, "❌ J'ai refusé votre proposition d'échange.");
-
-    } catch (err) {
-      console.error('Erreur refus échange:', err);
-    } finally {
-      setExchangeLoading(false);
-    }
-  };
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return "À l'instant";
-    if (diffMins < 60) return `Il y a ${diffMins} min`;
-    if (diffHours < 24) return `Il y a ${diffHours}h`;
-    if (diffDays === 1) return 'Hier';
-    if (diffDays < 7) return `Il y a ${diffDays} jours`;
-    return date.toLocaleDateString('fr-FR');
-  };
-
-  const formatMessageTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  };
-
   const filteredConversations = conversations.filter(c =>
     c.participant?.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.participant?.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -421,66 +90,41 @@ export const MessagesPage = () => {
     c.itemOffered?.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Empty state
   if (!loading && conversations.length === 0) {
-    return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-        <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ mb: 2, color: '#1F2937' }}>
-            💬 Aucune conversation
-          </Typography>
-          <Typography sx={{ color: '#6B7280', mb: 4 }}>
-            Proposez un échange sur un objet pour démarrer une conversation !
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => navigate('/home')}
-            sx={{
-              backgroundColor: '#22C55E',
-              textTransform: 'none',
-              fontWeight: 600,
-              '&:hover': { backgroundColor: '#16A34A' },
-            }}
-          >
-            Découvrir les objets
-          </Button>
-        </Container>
-      </Box>
-    );
+    return <EmptyState onNavigate={() => navigate('/home')} />;
   }
+
+  const searchField = (
+    <TextField
+      fullWidth
+      placeholder="Rechercher..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      size="small"
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <Search sx={{ color: '#9CA3AF' }} />
+            </InputAdornment>
+          ),
+        },
+      }}
+      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: '#F9FAFB' } }}
+    />
+  );
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
-
       {/* Mobile View */}
       <Box sx={{ display: { xs: 'block', md: 'none' } }}>
         {!selectedConversation ? (
-          // Mobile: Conversations list
           <Box sx={{ pb: 10 }}>
             <Box sx={{ p: 2, backgroundColor: '#fff', borderBottom: '1px solid #E5E7EB' }}>
               <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#1F2937', mb: 2 }}>
-                💬 Messagerie
+                Messagerie
               </Typography>
-              <TextField
-                fullWidth
-                placeholder="Rechercher..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ color: '#9CA3AF' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '10px',
-                    backgroundColor: '#F9FAFB',
-                  },
-                }}
-              />
+              {searchField}
             </Box>
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -490,14 +134,13 @@ export const MessagesPage = () => {
               <ConversationsList
                 conversations={filteredConversations}
                 selectedId={null}
-                onSelect={handleSelectConversation}
+                onSelect={selectConversation}
                 getInitials={getInitials}
                 formatTime={formatTime}
               />
             )}
           </Box>
         ) : (
-          // Mobile: Chat view
           <ChatView
             conversation={selectedConversation}
             conversationDetails={conversationDetails}
@@ -507,22 +150,12 @@ export const MessagesPage = () => {
             sending={sending}
             typingUser={typingUser}
             exchangeLoading={exchangeLoading}
-            onNewMessageChange={(value) => {
-              setNewMessage(value);
-              handleTyping();
-            }}
+            onNewMessageChange={(value) => { setNewMessage(value); handleTyping(); }}
             onSend={handleSendMessage}
             onKeyPress={handleKeyPress}
-            onAcceptExchange={handleAcceptExchange}
-            onRejectExchange={handleRejectExchange}
-            onBack={() => {
-              if (selectedConversation) {
-                socketService.leaveConversation(selectedConversation.id);
-              }
-              setSelectedConversation(null);
-              setConversationDetails(null);
-              setMessages([]);
-            }}
+            onAcceptExchange={acceptExchange}
+            onRejectExchange={rejectExchange}
+            onBack={closeChat}
             messagesEndRef={messagesEndRef}
             getInitials={getInitials}
             formatMessageTime={formatMessageTime}
@@ -544,7 +177,6 @@ export const MessagesPage = () => {
           height: 'calc(100vh - 180px)',
         }}
       >
-        {/* Left: Conversations list */}
         <Box
           sx={{
             width: 400,
@@ -561,26 +193,7 @@ export const MessagesPage = () => {
             <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#1F2937', mb: 2 }}>
               Conversations
             </Typography>
-            <TextField
-              fullWidth
-              placeholder="Rechercher..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search sx={{ color: '#9CA3AF' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '10px',
-                  backgroundColor: '#F9FAFB',
-                },
-              }}
-            />
+            {searchField}
           </Box>
           <Box sx={{ flex: 1, overflowY: 'auto' }}>
             {loading ? (
@@ -591,7 +204,7 @@ export const MessagesPage = () => {
               <ConversationsList
                 conversations={filteredConversations}
                 selectedId={selectedConversation?.id || null}
-                onSelect={handleSelectConversation}
+                onSelect={selectConversation}
                 getInitials={getInitials}
                 formatTime={formatTime}
               />
@@ -599,7 +212,6 @@ export const MessagesPage = () => {
           </Box>
         </Box>
 
-        {/* Right: Chat view */}
         <Box
           sx={{
             flex: 1,
@@ -621,514 +233,23 @@ export const MessagesPage = () => {
               sending={sending}
               typingUser={typingUser}
               exchangeLoading={exchangeLoading}
-              onNewMessageChange={(value) => {
-                setNewMessage(value);
-                handleTyping();
-              }}
+              onNewMessageChange={(value) => { setNewMessage(value); handleTyping(); }}
               onSend={handleSendMessage}
               onKeyPress={handleKeyPress}
-              onAcceptExchange={handleAcceptExchange}
-              onRejectExchange={handleRejectExchange}
+              onAcceptExchange={acceptExchange}
+              onRejectExchange={rejectExchange}
               messagesEndRef={messagesEndRef}
               getInitials={getInitials}
               formatMessageTime={formatMessageTime}
               navigate={navigate}
             />
           ) : (
-            <Box
-              sx={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#9CA3AF',
-              }}
-            >
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>
               <Typography>Sélectionnez une conversation</Typography>
             </Box>
           )}
         </Box>
       </Container>
-
-    </Box>
-  );
-};
-
-// Conversations List Component
-interface ConversationsListProps {
-  conversations: Conversation[];
-  selectedId: string | null;
-  onSelect: (conversation: Conversation) => void;
-  getInitials: (firstName: string, lastName: string) => string;
-  formatTime: (dateString: string) => string;
-}
-
-const ConversationsList = ({
-  conversations,
-  selectedId,
-  onSelect,
-  getInitials,
-  formatTime,
-}: ConversationsListProps) => (
-  <>
-    {conversations.map((conversation) => (
-      <Box
-        key={conversation.id}
-        onClick={() => onSelect(conversation)}
-        sx={{
-          p: 2,
-          display: 'flex',
-          gap: 2,
-          cursor: 'pointer',
-          backgroundColor: selectedId === conversation.id ? '#F0FDF4' : 'transparent',
-          borderLeft: selectedId === conversation.id ? '3px solid #22C55E' : '3px solid transparent',
-          transition: 'all 0.2s',
-          '&:hover': {
-            backgroundColor: selectedId === conversation.id ? '#F0FDF4' : '#F9FAFB',
-          },
-        }}
-      >
-        <Badge
-          badgeContent={conversation.unreadCount}
-          color="primary"
-          sx={{
-            '& .MuiBadge-badge': {
-              backgroundColor: '#22C55E',
-              color: '#fff',
-            },
-          }}
-        >
-          <Avatar
-            sx={{
-              width: 48,
-              height: 48,
-              backgroundColor: '#22C55E',
-              fontSize: 16,
-              fontWeight: 600,
-            }}
-          >
-            {conversation.participant
-              ? getInitials(conversation.participant.firstName, conversation.participant.lastName)
-              : '?'}
-          </Avatar>
-        </Badge>
-
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.25 }}>
-            <Typography
-              sx={{
-                fontSize: '15px',
-                fontWeight: conversation.unreadCount > 0 ? 700 : 600,
-                color: '#1F2937',
-              }}
-            >
-              {conversation.participant
-                ? `${conversation.participant.firstName} ${conversation.participant.lastName}`
-                : 'Utilisateur'}
-            </Typography>
-          </Box>
-          <Typography
-            sx={{
-              fontSize: '13px',
-              color: conversation.unreadCount > 0 ? '#1F2937' : '#6B7280',
-              fontWeight: conversation.unreadCount > 0 ? 500 : 400,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              mb: 0.5,
-            }}
-          >
-            {conversation.lastMessage || 'Aucun message'}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: '12px', color: '#9CA3AF' }}>
-              {formatTime(conversation.lastMessageAt)}
-            </Typography>
-            {conversation.itemRequested && (
-              <Chip
-                label={conversation.itemRequested.title}
-                size="small"
-                sx={{
-                  height: 22,
-                  fontSize: '11px',
-                  backgroundColor: '#F3F4F6',
-                  color: '#374151',
-                  fontWeight: 500,
-                  maxWidth: 120,
-                  '& .MuiChip-label': {
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  },
-                }}
-              />
-            )}
-          </Box>
-        </Box>
-      </Box>
-    ))}
-  </>
-);
-
-// Chat View Component
-interface ChatViewProps {
-  conversation: Conversation;
-  conversationDetails: ConversationDetails | null;
-  messages: Message[];
-  newMessage: string;
-  loadingMessages: boolean;
-  sending: boolean;
-  typingUser: string | null;
-  exchangeLoading: boolean;
-  onNewMessageChange: (value: string) => void;
-  onSend: () => void;
-  onKeyPress: (e: React.KeyboardEvent) => void;
-  onAcceptExchange: () => void;
-  onRejectExchange: () => void;
-  onBack?: () => void;
-  messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  getInitials: (firstName: string, lastName: string) => string;
-  formatMessageTime: (dateString: string) => string;
-  navigate: (path: string) => void;
-  isMobile?: boolean;
-}
-
-const ChatView = ({
-  conversation,
-  conversationDetails,
-  messages,
-  newMessage,
-  loadingMessages,
-  sending,
-  typingUser,
-  exchangeLoading,
-  onNewMessageChange,
-  onSend,
-  onKeyPress,
-  onAcceptExchange,
-  onRejectExchange,
-  onBack,
-  messagesEndRef,
-  getInitials,
-  formatMessageTime,
-  navigate,
-  isMobile,
-}: ChatViewProps) => {
-  const itemOffered = conversationDetails?.conversation.itemOffered;
-  const itemRequested = conversationDetails?.conversation.itemRequested;
-  // Utiliser le statut de conversationDetails en priorité (mis à jour après action)
-  const exchangeStatus = conversationDetails?.conversation.exchangeStatus || conversation.exchangeStatus;
-  const status = exchangeStatus ? statusConfig[exchangeStatus] : null;
-
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: isMobile ? 'calc(100vh - 60px)' : '100%' }}>
-      {/* Chat Header */}
-      <Box
-        sx={{
-          p: 2,
-          borderBottom: '1px solid #E5E7EB',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-        }}
-      >
-        {isMobile && (
-          <IconButton onClick={onBack} sx={{ mr: -1 }}>
-            <ArrowBack />
-          </IconButton>
-        )}
-        <Avatar
-          sx={{
-            width: 44,
-            height: 44,
-            backgroundColor: '#22C55E',
-            fontSize: 15,
-            fontWeight: 600,
-          }}
-        >
-          {conversation.participant
-            ? getInitials(conversation.participant.firstName, conversation.participant.lastName)
-            : '?'}
-        </Avatar>
-        <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>
-            {conversation.participant
-              ? `${conversation.participant.firstName} ${conversation.participant.lastName}`
-              : 'Utilisateur'}
-          </Typography>
-          {typingUser ? (
-            <Typography sx={{ fontSize: '13px', color: '#22C55E', fontStyle: 'italic' }}>
-              En train d'écrire...
-            </Typography>
-          ) : itemRequested ? (
-            <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
-              Échange : {itemRequested.title}
-            </Typography>
-          ) : null}
-        </Box>
-        {status && (
-          <Chip
-            icon={status.icon}
-            label={status.label}
-            size="small"
-            sx={{
-              backgroundColor: `${status.color}20`,
-              color: status.color,
-              fontWeight: 600,
-              '& .MuiChip-icon': { color: status.color },
-            }}
-          />
-        )}
-      </Box>
-
-      {/* Items Exchange Card */}
-      {(itemOffered || itemRequested) && (
-        <Box sx={{ p: 2, borderBottom: '1px solid #E5E7EB', backgroundColor: '#F9FAFB' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center' }}>
-            {/* Item Offered */}
-            {itemOffered && (
-              <Card
-                onClick={() => navigate(`/items/${itemOffered._id}`)}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  p: 1.5,
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  flex: 1,
-                  maxWidth: 200,
-                  transition: 'all 0.2s',
-                  '&:hover': { transform: 'scale(1.02)' },
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  sx={{ width: 50, height: 50, borderRadius: '8px', objectFit: 'cover' }}
-                  image={itemOffered.images?.[0] || 'https://placehold.co/50x50/E5E7EB/9CA3AF?text=📷'}
-                  alt={itemOffered.title}
-                />
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Proposé</Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: '#1F2937',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {itemOffered.title}
-                  </Typography>
-                </Box>
-              </Card>
-            )}
-
-            {/* Swap Icon */}
-            {itemOffered && itemRequested && (
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  backgroundColor: '#22C55E',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <SwapHoriz sx={{ color: '#fff', fontSize: 20 }} />
-              </Box>
-            )}
-
-            {/* Item Requested */}
-            {itemRequested && (
-              <Card
-                onClick={() => navigate(`/items/${itemRequested._id}`)}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  p: 1.5,
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  flex: 1,
-                  maxWidth: 200,
-                  transition: 'all 0.2s',
-                  '&:hover': { transform: 'scale(1.02)' },
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  sx={{ width: 50, height: 50, borderRadius: '8px', objectFit: 'cover' }}
-                  image={itemRequested.images?.[0] || 'https://placehold.co/50x50/E5E7EB/9CA3AF?text=📷'}
-                  alt={itemRequested.title}
-                />
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Demandé</Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: '#1F2937',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {itemRequested.title}
-                  </Typography>
-                </Box>
-              </Card>
-            )}
-          </Box>
-
-          {/* Action Buttons - Only show for owner when exchange is pending */}
-          {conversationDetails?.conversation.isOwner &&
-            conversationDetails?.conversation.exchangeStatus === 'pending' && (
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={onAcceptExchange}
-                  disabled={exchangeLoading}
-                  startIcon={exchangeLoading ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <CheckCircle />}
-                  sx={{
-                    backgroundColor: '#22C55E',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: '10px',
-                    px: 3,
-                    '&:hover': { backgroundColor: '#16A34A' },
-                  }}
-                >
-                  Accepter
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={onRejectExchange}
-                  disabled={exchangeLoading}
-                  startIcon={exchangeLoading ? <CircularProgress size={16} /> : <Cancel />}
-                  sx={{
-                    borderColor: '#EF4444',
-                    color: '#EF4444',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: '10px',
-                    px: 3,
-                    '&:hover': {
-                      borderColor: '#DC2626',
-                      backgroundColor: '#FEF2F2',
-                    },
-                  }}
-                >
-                  Refuser
-                </Button>
-              </Box>
-            )}
-        </Box>
-      )}
-
-      {/* Messages */}
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: 'auto',
-          p: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        {loadingMessages ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress sx={{ color: '#22C55E' }} size={30} />
-          </Box>
-        ) : messages.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography sx={{ color: '#9CA3AF' }}>
-              Aucun message. Commencez la conversation !
-            </Typography>
-          </Box>
-        ) : (
-          messages.map((message) => (
-            <Box
-              key={message.id}
-              sx={{
-                display: 'flex',
-                justifyContent: message.isOwn ? 'flex-end' : 'flex-start',
-              }}
-            >
-              <Box
-                sx={{
-                  maxWidth: '75%',
-                  p: 2,
-                  borderRadius: message.isOwn ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                  backgroundColor: message.isOwn ? '#22C55E' : '#F3F4F6',
-                  color: message.isOwn ? '#fff' : '#1F2937',
-                }}
-              >
-                <Typography sx={{ fontSize: '14px', lineHeight: 1.5 }}>
-                  {message.content}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: '11px',
-                    color: message.isOwn ? 'rgba(255,255,255,0.7)' : '#9CA3AF',
-                    mt: 0.5,
-                  }}
-                >
-                  {formatMessageTime(message.timestamp)}
-                </Typography>
-              </Box>
-            </Box>
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </Box>
-
-      {/* Input */}
-      <Box
-        sx={{
-          p: 2,
-          borderTop: '1px solid #E5E7EB',
-          display: 'flex',
-          gap: 1.5,
-          backgroundColor: '#fff',
-          pb: isMobile ? 10 : 2,
-        }}
-      >
-        <TextField
-          fullWidth
-          placeholder="Tapez votre message..."
-          value={newMessage}
-          onChange={(e) => onNewMessageChange(e.target.value)}
-          onKeyPress={onKeyPress}
-          size="small"
-          disabled={sending}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '12px',
-              backgroundColor: '#F9FAFB',
-            },
-          }}
-        />
-        <IconButton
-          onClick={onSend}
-          disabled={!newMessage.trim() || sending}
-          sx={{
-            backgroundColor: '#22C55E',
-            color: '#fff',
-            width: 44,
-            height: 44,
-            '&:hover': { backgroundColor: '#16A34A' },
-            '&.Mui-disabled': { backgroundColor: '#E5E7EB', color: '#9CA3AF' },
-          }}
-        >
-          {sending ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : <Send sx={{ fontSize: 20 }} />}
-        </IconButton>
-      </Box>
     </Box>
   );
 };
