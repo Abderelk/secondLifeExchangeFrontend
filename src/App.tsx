@@ -15,6 +15,9 @@ import { ProfilePage } from './pages/ProfilePage';
 import { EditProfilePage } from './pages/EditProfilePage';
 import { MessagesPage } from './pages/MessagesPage';
 import CalendarPage from './pages/CalendarPage';
+import CGUPage from './pages/CGUPage';
+import PolitiqueConfidentialitePage from './pages/PolitiqueConfidentialitePage';
+
 
 function App() {
   return (
@@ -99,9 +102,19 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/terms" element={
+              <ProtectedRoute>
+                <CGUPage />
+              </ProtectedRoute>} />
+            <Route path="/privacy" element={
+              <ProtectedRoute>
+                <PolitiqueConfidentialitePage />
+              </ProtectedRoute>
+            } />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
+
           </Routes>
         </div>
       </Router>
