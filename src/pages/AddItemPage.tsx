@@ -8,7 +8,7 @@ import {
   SuccessScreen,
   PageHeader,
 } from '../components/addItem';
-import ImagePicker from '../components/imagePicker/imagePicker';
+import ImagePicker from '../components/imagePicker/ImagePicker';
 
 type Condition = 'neuf' | 'très bon' | 'bon' | 'correct' | 'usé';
 
